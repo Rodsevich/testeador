@@ -1,62 +1,52 @@
 # Testeador
 
-[![style: very good analysis][very_good_analysis_badge]][very_good_analysis_link]
-[![Powered by Mason](https://img.shields.io/endpoint?url=https%3A%2F%2Ftinyurl.com%2Fmason-badge)](https://github.com/felangel/mason)
-[![License: MIT][license_badge]][license_link]
+A package for grouping and executing Dart tests in sequence, designed for environments that may not have Dart installed when compiled as a standalone binary.
 
-A Very Good Project created by Very Good CLI.
+## Features
 
-## Installation 💻
+- **TestFlow**: Group tests into logical flows.
+- **TestStep**: Define individual steps within a flow.
+- **Fixture**: Pre-load models, database connections, or any necessary data.
+- **Tags**: Filter and run specific test groups.
+- **Sequential Execution**: Ensures tests run in the order they are defined.
 
-**❗ In order to start using Testeador you must have the [Dart SDK][dart_install_link] installed on your machine.**
+## Usage
 
-Install via `dart pub add`:
+```dart
+import 'package:testeador/testeador.dart';
 
-```sh
-dart pub add testeador
+void main() async {
+  final flow = TestFlow(
+    name: 'Simple Flow',
+    steps: [
+      TestStep(
+        name: 'Step 1',
+        action: () => print('Hello'),
+      ),
+    ],
+  );
+
+  final runner = TestRunner(flows: [flow]);
+  await runner.run();
+}
 ```
 
----
+## Running in environments without Dart
 
-## Continuous Integration 🤖
+You can compile your test suite into a standalone executable using `dart compile exe`. This allows you to run your tests in CI/CD pipelines (like GitHub Actions or GitLab CI) without needing to install the Dart SDK.
 
-Testeador comes with a built-in [GitHub Actions workflow][github_actions_link] powered by [Very Good Workflows][very_good_workflows_link] but you can also add your preferred CI/CD solution.
+1. Create a Dart file (e.g., `test_suite.dart`) with your `TestFlow`s and `TestRunner`.
+2. Compile it:
+   ```bash
+   dart compile exe example/main.dart -o test_suite
+   ```
+3. Run the resulting binary:
+   ```bash
+   ./test_suite
+   ```
 
-Out of the box, on each pull request and push, the CI `formats`, `lints`, and `tests` the code. This ensures the code remains consistent and behaves correctly as you add functionality or make changes. The project uses [Very Good Analysis][very_good_analysis_link] for a strict set of analysis options used by our team. Code coverage is enforced using the [Very Good Workflows][very_good_coverage_link].
+## Core Classes
 
----
-
-## Running Tests 🧪
-
-To run all unit tests:
-
-```sh
-dart pub global activate coverage 1.15.0
-dart test --coverage=coverage
-dart pub global run coverage:format_coverage --lcov --in=coverage --out=coverage/lcov.info
-```
-
-To view the generated coverage report you can use [lcov](https://github.com/linux-test-project/lcov).
-
-```sh
-# Generate Coverage Report
-genhtml coverage/lcov.info -o coverage/
-
-# Open Coverage Report
-open coverage/index.html
-```
-
-[dart_install_link]: https://dart.dev/get-dart
-[github_actions_link]: https://docs.github.com/en/actions/learn-github-actions
-[license_badge]: https://img.shields.io/badge/license-MIT-blue.svg
-[license_link]: https://opensource.org/licenses/MIT
-[logo_black]: https://raw.githubusercontent.com/VGVentures/very_good_brand/main/styles/README/vgv_logo_black.png#gh-light-mode-only
-[logo_white]: https://raw.githubusercontent.com/VGVentures/very_good_brand/main/styles/README/vgv_logo_white.png#gh-dark-mode-only
-[mason_link]: https://github.com/felangel/mason
-[very_good_analysis_badge]: https://img.shields.io/badge/style-very_good_analysis-B22C89.svg
-[very_good_analysis_link]: https://pub.dev/packages/very_good_analysis
-[very_good_coverage_link]: https://github.com/marketplace/actions/very-good-coverage
-[very_good_ventures_link]: https://verygood.ventures
-[very_good_ventures_link_light]: https://verygood.ventures#gh-light-mode-only
-[very_good_ventures_link_dark]: https://verygood.ventures#gh-dark-mode-only
-[very_good_workflows_link]: https://github.com/VeryGoodOpenSource/very_good_workflows
+- `TestFlow`: The main container for a sequence of tests.
+- `TestStep`: A single unit of work within a flow.
+- `Fixture`: An abstract class to handle setup and teardown of resources.
