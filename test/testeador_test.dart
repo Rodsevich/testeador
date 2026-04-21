@@ -27,8 +27,9 @@ void main() {
     test('executes flows and steps sequentially', () async {
       final executionOrder = <String>[];
 
-      final flow = TestFlow(
+      final flow = TestFlowTransient(
         name: 'Flow 1',
+        rollbackStrategy: RollbackStrategyCustom(revertAction: () async {}),
         steps: [
           TestStep(
             name: 'Step 1',
@@ -50,13 +51,15 @@ void main() {
     test('filters flows by tags', () async {
       final executedFlows = <String>[];
 
-      final flow1 = TestFlow(
+      final flow1 = TestFlowTransient(
         name: 'Flow 1',
+        rollbackStrategy: RollbackStrategyCustom(revertAction: () async {}),
         tags: {'tag1'},
         steps: [TestStep(name: 'S1', action: () => executedFlows.add('flow1'))],
       );
-      final flow2 = TestFlow(
+      final flow2 = TestFlowTransient(
         name: 'Flow 2',
+        rollbackStrategy: RollbackStrategyCustom(revertAction: () async {}),
         tags: {'tag2'},
         steps: [TestStep(name: 'S2', action: () => executedFlows.add('flow2'))],
       );
@@ -73,8 +76,9 @@ void main() {
 
     test('manages fixture lifecycle', () async {
       final fixture = MockFixture();
-      final flow = TestFlow(
+      final flow = TestFlowTransient(
         name: 'Flow with Fixture',
+        rollbackStrategy: RollbackStrategyCustom(revertAction: () async {}),
         fixtures: [fixture],
         steps: [TestStep(name: 'Step', action: () {})],
       );
@@ -88,8 +92,9 @@ void main() {
 
     test('disposes fixtures even if steps fail', () async {
       final fixture = MockFixture();
-      final flow = TestFlow(
+      final flow = TestFlowTransient(
         name: 'Failing Flow',
+        rollbackStrategy: RollbackStrategyCustom(revertAction: () async {}),
         fixtures: [fixture],
         steps: [
           TestStep(
@@ -114,8 +119,9 @@ void main() {
       final failingFixture = FailingFixture();
       final fixture2 = MockFixture();
 
-      final flow = TestFlow(
+      final flow = TestFlowTransient(
         name: 'Fixture Failure Flow',
+        rollbackStrategy: RollbackStrategyCustom(revertAction: () async {}),
         fixtures: [fixture1, failingFixture, fixture2],
         steps: [TestStep(name: 'Step', action: () {})],
       );
@@ -134,8 +140,9 @@ void main() {
     test('continues on failure if failFast is false', () async {
       final executedFlows = <String>[];
 
-      final flow1 = TestFlow(
+      final flow1 = TestFlowTransient(
         name: 'Failing Flow',
+        rollbackStrategy: RollbackStrategyCustom(revertAction: () async {}),
         steps: [
           TestStep(
             name: 'Fail',
@@ -143,8 +150,9 @@ void main() {
           ),
         ],
       );
-      final flow2 = TestFlow(
+      final flow2 = TestFlowTransient(
         name: 'Succeeding Flow',
+        rollbackStrategy: RollbackStrategyCustom(revertAction: () async {}),
         steps: [
           TestStep(
             name: 'Success',
@@ -158,6 +166,126 @@ void main() {
       await runner.run(failFast: false);
 
       expect(executedFlows, equals(['flow2']));
+    });
+
+    test('executes revertAction when TestFlowTransient fails', () async {
+      var revertExecuted = false;
+
+      final flow = TestFlowTransient(
+        name: 'Failing Flow',
+        steps: [
+          TestStep(
+            name: 'Fail',
+            action: () => throw Exception('Failure'),
+          ),
+        ],
+        rollbackStrategy: RollbackStrategyCustom(
+          revertAction: () async {
+            revertExecuted = true;
+          },
+        ),
+      );
+
+      final runner = TestRunner(flows: [flow]);
+
+      try {
+        await runner.run();
+      } catch (_) {}
+
+      expect(revertExecuted, isTrue);
+    });
+
+    test('executes TestFlowLasting and its steps', () async {
+      final executionOrder = <String>[];
+
+      final flow = TestFlowLasting(
+        name: 'Lasting Flow',
+        steps: [
+          TestStep(
+            name: 'Step 1',
+            action: () => executionOrder.add('lasting_step1'),
+          ),
+        ],
+      );
+
+      final runner = TestRunner(flows: [flow]);
+      await runner.run();
+
+      expect(executionOrder, equals(['lasting_step1']));
+    });
+
+    test('executes a complete CRUD flow successfully', () async {
+      // Let's simulate an API service using a local Map.
+      final mockDatabase = <String, Map<String, dynamic>>{};
+      String? createdId;
+
+      final flow = TestFlowTransient(
+        name: 'Simulated API CRUD Flow',
+        rollbackStrategy: RollbackStrategyCustom(
+          revertAction: () async {
+            // In a real scenario, this would clean up the DB
+            if (createdId != null) {
+              mockDatabase.remove(createdId);
+            }
+          },
+        ),
+        steps: [
+          TestStep(
+            name: 'Create',
+            action: () async {
+              createdId = 'mock_id_123';
+              mockDatabase[createdId!] = {
+                'name': 'Pokemon Team',
+                'pokemons': ['pikachu'],
+              };
+            },
+          ),
+          TestStep(
+            name: 'Read',
+            action: () async {
+              final team = mockDatabase[createdId!];
+              if (team == null) throw Exception('Team not found');
+              final pokemons = team['pokemons'] as List;
+              if (pokemons.length != 1 || pokemons[0] != 'pikachu') {
+                throw Exception('Team data mismatch');
+              }
+            },
+          ),
+          TestStep(
+            name: 'Update',
+            action: () async {
+              mockDatabase[createdId!]!['pokemons'] = ['pikachu', 'bulbasaur'];
+            },
+          ),
+          TestStep(
+            name: 'Read after Update',
+            action: () async {
+              final team = mockDatabase[createdId!];
+              final pokemons = team!['pokemons'] as List;
+              if (pokemons.length != 2) throw Exception('Update failed');
+            },
+          ),
+          TestStep(
+            name: 'Delete (Simulated via failure to trigger rollback)',
+            action: () async {
+              // We intentionally throw here to ensure the runner triggers the
+              // rollbackStrategy which cleans up the mockDatabase.
+              throw Exception('Intentional failure to trigger cleanup');
+            },
+          ),
+        ],
+      );
+
+      final runner = TestRunner(flows: [flow]);
+
+      try {
+        await runner.run();
+      } catch (e) {
+        // Exception caught, rollback should have happened.
+      }
+
+      // Assert that rollback cleaned up the created ID.
+      expect(mockDatabase.containsKey(createdId), isFalse);
     });
   });
 }

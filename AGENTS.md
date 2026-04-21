@@ -8,13 +8,16 @@ This file provides context and instructions for AI agents working on the `testea
 ## Core Architecture
 
 ### 1. TestFlow (`lib/src/test_flow.dart`)
-- Groups multiple `TestStep`s.
+- Sequentially chains a series of `TestStep`s to form a complete integration flow.
 - Supports `tags` for filtering.
 - Can have multiple `Fixture`s.
 - Execution is always sequential.
+- Subdivided into two types:
+  - `TestFlowTransient`: Expected to leave the database as it found it. Successful runs should clean up their own changes. On failure, triggers a `RollbackStrategy` object.
+  - `TestFlowLasting`: Safe to leave data altered in the database (e.g., seeding data).
 
 ### 2. TestStep (`lib/src/test_step.dart`)
-- Represents a single action/assertion in a test.
+- Executes an integration test of the frontend package interacting with a backend, typically orchestrating actions across different repositories.
 - Contains a `name` and an `action` function.
 
 ### 3. Fixture (`lib/src/fixture.dart`)

@@ -47,6 +47,27 @@ class TestRunner {
         print('Flow failed: ${flow.name}');
         print('Error: $e');
         print('Stack trace: $stackTrace');
+
+        if (flow is TestFlowTransient) {
+          print(
+            'Executing rollback strategy for TestFlowTransient: ${flow.name}',
+          );
+          try {
+            await flow.rollbackStrategy.execute(
+              reloadFixtures: () async {
+                print('  Reloading fixtures after rollback...');
+                loadedFixtures.clear();
+                for (final fixture in flow.fixtures) {
+                  loadedFixtures.add(await fixture.load());
+                }
+              },
+            );
+            print('Rollback strategy completed successfully.');
+          } catch (revertError) {
+            print('Rollback strategy failed: $revertError');
+          }
+        }
+
         if (failFast) rethrow;
       } finally {
         // Dispose fixtures in reverse order

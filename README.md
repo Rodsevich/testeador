@@ -4,8 +4,8 @@ A package for grouping and executing Dart tests in sequence, designed for enviro
 
 ## Features
 
-- **TestFlow**: Group tests into logical flows.
-- **TestStep**: Define individual steps within a flow.
+- **TestFlow**: Sequentially chain a series of integration tests (TestSteps).
+- **TestStep**: Execute an integration test (e.g., frontend against a backend, often across different repositories).
 - **Fixture**: Pre-load models, database connections, or any necessary data.
 - **Tags**: Filter and run specific test groups.
 - **Sequential Execution**: Ensures tests run in the order they are defined.
@@ -16,7 +16,7 @@ A package for grouping and executing Dart tests in sequence, designed for enviro
 import 'package:testeador/testeador.dart';
 
 void main() async {
-  final flow = TestFlow(
+  final flow = TestFlowTransient(
     name: 'Simple Flow',
     steps: [
       TestStep(
@@ -24,6 +24,11 @@ void main() async {
         action: () => print('Hello'),
       ),
     ],
+    rollbackStrategy: RollbackStrategyCustom(
+      revertAction: () async {
+        print('Reverting changes...');
+      },
+    ),
   );
 
   final runner = TestRunner(flows: [flow]);
@@ -47,6 +52,16 @@ You can compile your test suite into a standalone executable using `dart compile
 
 ## Core Classes
 
-- `TestFlow`: The main container for a sequence of tests.
-- `TestStep`: A single unit of work within a flow.
+- `TestFlow`: Sequentially chains a series of `TestStep`s to form an integration flow. Divided into two types:
+  - `TestFlowTransient`: Must not alter the database state permanently. Steps should revert changes on success, and on failure, rollback mechanisms are triggered via a `RollbackStrategy`.
+  - `TestFlowLasting`: Database changes are expected to remain without issues.
+- `TestStep`: Executes an integration test of a frontend package against a backend, typically orchestrating logic across repositories.
 - `Fixture`: An abstract class to handle setup and teardown of resources.
+
+## For AI Agents
+
+When interacting with this codebase, remember the following principles:
+
+1. **Purpose**: `testeador` is built to run integration/e2e flows *sequentially* and compile into standalone binaries for CI/CD systems without Dart SDKs.
+2. **Architecture**: Never write concurrent tests. Rely on `TestRunner` to execute `TestFlow`s sequentially. Use `Fixture` to load external resources (like DBs or AI models) and clean them up automatically during teardown.
+3. **Reference**: See [`AGENTS.md`](./AGENTS.md) for deeper architectural guidelines and coding tasks context.

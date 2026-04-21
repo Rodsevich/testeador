@@ -15,7 +15,7 @@ class DatabaseFixture extends Fixture<String> {
 
 void main() async {
   final flows = [
-    TestFlow(
+    TestFlowTransient(
       name: 'Auth Flow',
       tags: {'smoke', 'auth'},
       fixtures: [DatabaseFixture()],
@@ -29,8 +29,13 @@ void main() async {
           action: () => print('Verifying profile data...'),
         ),
       ],
+      rollbackStrategy: RollbackStrategyCustom(
+        revertAction: () async {
+          print('Reverting any auth data created...');
+        },
+      ),
     ),
-    TestFlow(
+    TestFlowTransient(
       name: 'Settings Flow',
       tags: {'settings'},
       steps: [
@@ -39,6 +44,7 @@ void main() async {
           action: () => print('Updating password...'),
         ),
       ],
+      rollbackStrategy: RollbackStrategyCustom(revertAction: () async {}),
     ),
   ];
 
