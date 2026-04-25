@@ -1,67 +1,70 @@
+/// A Pokémon with its name, types, and sprite URL.
 class Pokemon {
-  final int id;
-  final String name;
-  final String imageUrl;
-  final String firstAbilityName;
-
-  Pokemon({
-    required this.id,
+  /// Creates a [Pokemon] with the given [name], [types], and [spriteUrl].
+  const Pokemon({
     required this.name,
-    required this.imageUrl,
-    required this.firstAbilityName,
+    required this.types,
+    required this.spriteUrl,
   });
 
-  factory Pokemon.fromJson(Map<String, dynamic> json) {
-    final abilities = json['abilities'] as List;
-    final firstAbility = abilities.isNotEmpty
-        ? abilities[0]['ability']['name'] as String
-        : '';
+  /// The Pokémon's name as returned by PokéAPI (e.g. `'charizard'`).
+  final String name;
 
-    return Pokemon(
-      id: json['id'] as int,
-      name: json['name'] as String,
-      imageUrl: json['sprites']['front_default'] as String,
-      firstAbilityName: firstAbility,
-    );
-  }
+  /// The list of type names for this Pokémon (e.g. `['fire', 'flying']`).
+  final List<String> types;
 
-  Map<String, dynamic> toJson() {
-    // Note: restful-api.dev limits the string lengths occasionally causing 500
-    // so we omit the imageUrl since PokeAPI sprites are predictable via ID.
-    return {
-      'p_id': id.toString(),
-      'name': name,
-      'firstAbilityName': firstAbilityName,
-    };
-  }
+  /// URL of the official front sprite from PokéAPI.
+  final String spriteUrl;
 
-  factory Pokemon.fromTeamJson(Map<String, dynamic> json) {
-    final pId = json['p_id'].toString();
-    return Pokemon(
-      id: int.parse(pId),
-      name: json['name'] as String,
-      imageUrl:
-          'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/$pId.png',
-      firstAbilityName: json['firstAbilityName'] as String,
-    );
-  }
+  @override
+  String toString() => 'Pokemon(name: $name, types: $types)';
 }
 
-class Ability {
+/// A player registered in the battle system.
+class Player {
+  /// Creates a [Player] with the given fields.
+  const Player({
+    required this.id,
+    required this.name,
+    required this.pokemonNames,
+  });
+
+  /// The ID assigned by restful-api.dev.
+  final String id;
+
+  /// The actor's name.
   final String name;
-  final String effect;
 
-  Ability({required this.name, required this.effect});
+  /// The 6 Pokémon names in this player's pool.
+  final List<String> pokemonNames;
 
-  factory Ability.fromJson(Map<String, dynamic> json) {
-    final effectEntries = json['effect_entries'] as List;
-    final effectEntry = effectEntries.firstWhere(
-      (e) => e['language']['name'] == 'en',
-      orElse: () => {'effect': 'No effect available'},
-    );
-    return Ability(
-      name: json['name'] as String,
-      effect: effectEntry['effect'] as String,
-    );
-  }
+  @override
+  String toString() => 'Player(id: $id, name: $name, pokemon: $pokemonNames)';
+}
+
+/// A battle challenge between two players.
+class Battle {
+  /// Creates a [Battle] with the given fields.
+  const Battle({
+    required this.id,
+    required this.challengerName,
+    required this.opponentName,
+    required this.challengerTeam,
+  });
+
+  /// The ID assigned by restful-api.dev.
+  final String id;
+
+  /// Name of the actor who issued the challenge.
+  final String challengerName;
+
+  /// Name of the actor being challenged.
+  final String opponentName;
+
+  /// The 3 Pokémon names the challenger selected for battle.
+  final List<String> challengerTeam;
+
+  @override
+  String toString() => 'Battle(id: $id, $challengerName vs $opponentName, '
+      'team: $challengerTeam)';
 }

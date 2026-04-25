@@ -1,44 +1,53 @@
-import '../data/api_client.dart';
-import 'models.dart';
+import 'package:dio/dio.dart';
+import 'package:testeador_example/data/api_client.dart';
+import 'package:testeador_example/domain/models.dart';
 
+/// Fetches Pokémon data from PokéAPI.
 class PokemonRepository {
-  const PokemonRepository(this.client);
-  final PokemonClient client;
+  /// Creates a [PokemonRepository] using the given [Dio] instance.
+  PokemonRepository(Dio dio) : _client = PokeApiClient(dio);
 
-  Future<Pokemon> getPokemon(String name) async {
-    final data = await client.fetchPokemon(name);
-    return Pokemon.fromJson(data);
-  }
+  final PokeApiClient _client;
+
+  /// Fetches a single [Pokemon] by [name] from PokéAPI.
+  Future<Pokemon> getPokemon(String name) => _client.fetchPokemon(name);
 }
 
-class AbilityRepository {
-  const AbilityRepository(this.client);
-  final PokemonClient client;
+/// Manages player registrations and battles via restful-api.dev.
+class BattleRepository {
+  /// Creates a [BattleRepository] using the given [Dio] instance.
+  BattleRepository(Dio dio) : _client = BattleApiClient(dio);
 
-  Future<Ability> getAbility(String name) async {
-    final data = await client.fetchAbility(name);
-    return Ability.fromJson(data);
-  }
-}
+  final BattleApiClient _client;
 
-class TeamRepository {
-  const TeamRepository(this.client);
-  final TeamClient client;
+  /// Registers this actor as a player with their 6 Pokémon pool.
+  Future<Player> registerPlayer({
+    required String actorName,
+    required List<String> pokemonNames,
+  }) =>
+      _client.registerPlayer(
+        actorName: actorName,
+        pokemonNames: pokemonNames,
+      );
 
-  Future<String> createTeam(List<Pokemon> pokemons) async {
-    final data = pokemons.map((p) => p.toJson()).toList();
-    return await client.createTeam(data);
-  }
+  /// Lists all registered players.
+  Future<List<Player>> listPlayers() => _client.listPlayers();
 
-  Future<List<Pokemon>> getTeam(String id) async {
-    final data = await client.fetchTeam(id);
-    return data
-        .map((json) => Pokemon.fromTeamJson(json as Map<String, dynamic>))
-        .toList();
-  }
+  /// Creates a battle challenge from [challengerName] against [opponentName].
+  Future<Battle> createBattle({
+    required String challengerName,
+    required String opponentName,
+    required List<String> challengerTeam,
+  }) =>
+      _client.createBattle(
+        challengerName: challengerName,
+        opponentName: opponentName,
+        challengerTeam: challengerTeam,
+      );
 
-  Future<void> updateTeam(String id, List<Pokemon> pokemons) async {
-    final data = pokemons.map((p) => p.toJson()).toList();
-    await client.updateTeam(id, data);
-  }
+  /// Fetches a battle by its [id].
+  Future<Battle> getBattle(String id) => _client.getBattle(id);
+
+  /// Lists all active battles.
+  Future<List<Battle>> listBattles() => _client.listBattles();
 }

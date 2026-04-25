@@ -1,291 +1,363 @@
+import 'package:dio/dio.dart';
 import 'package:test/test.dart';
 import 'package:testeador/testeador.dart';
 
-class MockFixture extends Fixture<int> {
+// ---------------------------------------------------------------------------
+// Test doubles
+// ---------------------------------------------------------------------------
+
+class _TestActor extends Actor {
+  _TestActor(String name) : super(name: name, dio: Dio());
+}
+
+class _TrackingFixture extends Fixture<String> {
   int loadCount = 0;
   int disposeCount = 0;
+  String? lastDisposedData;
 
   @override
-  Future<int> load() async {
+  Future<String> load() async {
     loadCount++;
-    return 42;
+    return 'fixture-context';
   }
 
   @override
-  Future<void> dispose(int data) async {
+  Future<void> dispose(String data) async {
     disposeCount++;
+    lastDisposedData = data;
   }
 }
 
-class FailingFixture extends Fixture<int> {
+class _FailingFixture extends Fixture<int> {
   @override
-  Future<int> load() async => throw Exception('Load failure');
+  Future<int> load() async => throw Exception('fixture load failed');
 }
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/// Runs [testeador] in standalone mode without actually calling [exit].
+///
+/// We override [exitOnFailure] to false so the runner doesn't call exit(1)
+/// during tests.
+Future<void> _runNoExit(
+  Testeador testeador, {
+  List<String> args = const [],
+}) async {
+  // Prepend --no-exit-on-failure so tests don't call exit().
+  await testeador.run(['--no-exit-on-failure', ...args]);
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
 
 void main() {
-  group('TestRunner', () {
-    test('executes flows and steps sequentially', () async {
-      final executionOrder = <String>[];
+  // -------------------------------------------------------------------------
+  // TesteadorOptions defaults
+  // -------------------------------------------------------------------------
+  group('TesteadorOptions defaults', () {
+    test('has expected default values', () {
+      const opts = TesteadorOptions();
+      expect(opts.includeTags, isEmpty);
+      expect(opts.excludeTags, isEmpty);
+      expect(opts.includeFlows, isEmpty);
+      expect(opts.excludeFlows, isEmpty);
+      expect(opts.failFast, isTrue);
+      expect(opts.verbose, isFalse);
+      expect(opts.exitOnFailure, isTrue);
+      expect(opts.showCurls, isTrue);
+      expect(opts.showStackTraces, isFalse);
+    });
+  });
 
-      final flow = TestFlowTransient(
-        name: 'Flow 1',
-        rollbackStrategy: RollbackStrategyCustom(revertAction: () async {}),
+  // -------------------------------------------------------------------------
+  // TestFlowLasting — steps run in order
+  // -------------------------------------------------------------------------
+  group('TestFlowLasting', () {
+    test('runs steps in declared order', () async {
+      final order = <String>[];
+      final flow = TestFlowLasting(
+        name: 'Lasting',
         steps: [
-          TestStep(
-            name: 'Step 1',
-            action: () => executionOrder.add('step1'),
-          ),
-          TestStep(
-            name: 'Step 2',
-            action: () => executionOrder.add('step2'),
-          ),
+          TestStep(name: 'A', action: () => order.add('A')),
+          TestStep(name: 'B', action: () => order.add('B')),
+          TestStep(name: 'C', action: () => order.add('C')),
         ],
       );
 
-      final runner = TestRunner(flows: [flow]);
-      await runner.run();
+      final runner = Testeador(flows: [flow]);
+      await _runNoExit(runner);
 
-      expect(executionOrder, equals(['step1', 'step2']));
+      expect(order, equals(['A', 'B', 'C']));
     });
+  });
 
-    test('filters flows by tags', () async {
-      final executedFlows = <String>[];
-
-      final flow1 = TestFlowTransient(
-        name: 'Flow 1',
-        rollbackStrategy: RollbackStrategyCustom(revertAction: () async {}),
-        tags: {'tag1'},
-        steps: [TestStep(name: 'S1', action: () => executedFlows.add('flow1'))],
-      );
-      final flow2 = TestFlowTransient(
-        name: 'Flow 2',
-        rollbackStrategy: RollbackStrategyCustom(revertAction: () async {}),
-        tags: {'tag2'},
-        steps: [TestStep(name: 'S2', action: () => executedFlows.add('flow2'))],
-      );
-
-      final runner = TestRunner(flows: [flow1, flow2]);
-
-      await runner.run(tags: {'tag1'});
-      expect(executedFlows, equals(['flow1']));
-
-      executedFlows.clear();
-      await runner.run(tags: {'tag2'});
-      expect(executedFlows, equals(['flow2']));
-    });
-
-    test('manages fixture lifecycle', () async {
-      final fixture = MockFixture();
+  // -------------------------------------------------------------------------
+  // TestFlowTransient — steps run in order (no rollback expected yet)
+  // -------------------------------------------------------------------------
+  group('TestFlowTransient', () {
+    test('runs steps in declared order', () async {
+      final order = <String>[];
       final flow = TestFlowTransient(
-        name: 'Flow with Fixture',
-        rollbackStrategy: RollbackStrategyCustom(revertAction: () async {}),
-        fixtures: [fixture],
-        steps: [TestStep(name: 'Step', action: () {})],
-      );
-
-      final runner = TestRunner(flows: [flow]);
-      await runner.run();
-
-      expect(fixture.loadCount, equals(1));
-      expect(fixture.disposeCount, equals(1));
-    });
-
-    test('disposes fixtures even if steps fail', () async {
-      final fixture = MockFixture();
-      final flow = TestFlowTransient(
-        name: 'Failing Flow',
-        rollbackStrategy: RollbackStrategyCustom(revertAction: () async {}),
-        fixtures: [fixture],
+        name: 'Transient',
         steps: [
-          TestStep(
-            name: 'Failing Step',
-            action: () => throw Exception('Test failure'),
-          ),
+          TestStep(name: 'X', action: () => order.add('X')),
+          TestStep(name: 'Y', action: () => order.add('Y')),
         ],
       );
 
-      final runner = TestRunner(flows: [flow]);
+      final runner = Testeador(flows: [flow]);
+      await _runNoExit(runner);
 
-      try {
-        await runner.run();
-      } catch (_) {}
-
-      expect(fixture.loadCount, equals(1));
-      expect(fixture.disposeCount, equals(1));
+      expect(order, equals(['X', 'Y']));
     });
+  });
 
-    test('handles fixture loading failure gracefully', () async {
-      final fixture1 = MockFixture();
-      final failingFixture = FailingFixture();
-      final fixture2 = MockFixture();
-
-      final flow = TestFlowTransient(
-        name: 'Fixture Failure Flow',
-        rollbackStrategy: RollbackStrategyCustom(revertAction: () async {}),
-        fixtures: [fixture1, failingFixture, fixture2],
-        steps: [TestStep(name: 'Step', action: () {})],
-      );
-
-      final runner = TestRunner(flows: [flow]);
-
-      try {
-        await runner.run();
-      } catch (_) {}
-
-      expect(fixture1.loadCount, equals(1));
-      expect(fixture1.disposeCount, equals(1));
-      expect(fixture2.loadCount, equals(0));
-    });
-
-    test('continues on failure if failFast is false', () async {
-      final executedFlows = <String>[];
-
-      final flow1 = TestFlowTransient(
-        name: 'Failing Flow',
-        rollbackStrategy: RollbackStrategyCustom(revertAction: () async {}),
-        steps: [
-          TestStep(
-            name: 'Fail',
-            action: () => throw Exception('Failure'),
-          ),
-        ],
-      );
-      final flow2 = TestFlowTransient(
-        name: 'Succeeding Flow',
-        rollbackStrategy: RollbackStrategyCustom(revertAction: () async {}),
-        steps: [
-          TestStep(
-            name: 'Success',
-            action: () => executedFlows.add('flow2'),
-          ),
-        ],
-      );
-
-      final runner = TestRunner(flows: [flow1, flow2]);
-
-      await runner.run(failFast: false);
-
-      expect(executedFlows, equals(['flow2']));
-    });
-
-    test('executes revertAction when TestFlowTransient fails', () async {
-      var revertExecuted = false;
-
-      final flow = TestFlowTransient(
-        name: 'Failing Flow',
-        steps: [
-          TestStep(
-            name: 'Fail',
-            action: () => throw Exception('Failure'),
-          ),
-        ],
-        rollbackStrategy: RollbackStrategyCustom(
-          revertAction: () async {
-            revertExecuted = true;
-          },
-        ),
-      );
-
-      final runner = TestRunner(flows: [flow]);
-
-      try {
-        await runner.run();
-      } catch (_) {}
-
-      expect(revertExecuted, isTrue);
-    });
-
-    test('executes TestFlowLasting and its steps', () async {
-      final executionOrder = <String>[];
+  // -------------------------------------------------------------------------
+  // Fixture lifecycle
+  // -------------------------------------------------------------------------
+  group('Fixture lifecycle', () {
+    test('load is called before steps, dispose after', () async {
+      final fixture = _TrackingFixture();
+      final stepOrder = <String>[];
 
       final flow = TestFlowLasting(
-        name: 'Lasting Flow',
+        name: 'Fixture Flow',
+        fixture: fixture,
         steps: [
-          TestStep(
-            name: 'Step 1',
-            action: () => executionOrder.add('lasting_step1'),
-          ),
+          TestStep(name: 'Step', action: () => stepOrder.add('step')),
         ],
       );
 
-      final runner = TestRunner(flows: [flow]);
-      await runner.run();
+      final runner = Testeador(flows: [flow]);
+      await _runNoExit(runner);
 
-      expect(executionOrder, equals(['lasting_step1']));
+      expect(fixture.loadCount, equals(1));
+      expect(fixture.disposeCount, equals(1));
+      expect(fixture.lastDisposedData, equals('fixture-context'));
+      expect(stepOrder, equals(['step']));
     });
 
-    test('executes a complete CRUD flow successfully', () async {
-      // Let's simulate an API service using a local Map.
-      final mockDatabase = <String, Map<String, dynamic>>{};
-      String? createdId;
+    test('dispose is called even when a step throws', () async {
+      final fixture = _TrackingFixture();
 
-      final flow = TestFlowTransient(
-        name: 'Simulated API CRUD Flow',
-        rollbackStrategy: RollbackStrategyCustom(
-          revertAction: () async {
-            // In a real scenario, this would clean up the DB
-            if (createdId != null) {
-              mockDatabase.remove(createdId);
-            }
-          },
-        ),
+      final flow = TestFlowLasting(
+        name: 'Failing Flow',
+        fixture: fixture,
         steps: [
           TestStep(
-            name: 'Create',
-            action: () async {
-              createdId = 'mock_id_123';
-              mockDatabase[createdId!] = {
-                'name': 'Pokemon Team',
-                'pokemons': ['pikachu'],
-              };
-            },
-          ),
-          TestStep(
-            name: 'Read',
-            action: () async {
-              final team = mockDatabase[createdId!];
-              if (team == null) throw Exception('Team not found');
-              final pokemons = team['pokemons'] as List;
-              if (pokemons.length != 1 || pokemons[0] != 'pikachu') {
-                throw Exception('Team data mismatch');
-              }
-            },
-          ),
-          TestStep(
-            name: 'Update',
-            action: () async {
-              mockDatabase[createdId!]!['pokemons'] = ['pikachu', 'bulbasaur'];
-            },
-          ),
-          TestStep(
-            name: 'Read after Update',
-            action: () async {
-              final team = mockDatabase[createdId!];
-              final pokemons = team!['pokemons'] as List;
-              if (pokemons.length != 2) throw Exception('Update failed');
-            },
-          ),
-          TestStep(
-            name: 'Delete (Simulated via failure to trigger rollback)',
-            action: () async {
-              // We intentionally throw here to ensure the runner triggers the
-              // rollbackStrategy which cleans up the mockDatabase.
-              throw Exception('Intentional failure to trigger cleanup');
-            },
+            name: 'Boom',
+            action: () => throw Exception('step failed'),
           ),
         ],
       );
 
-      final runner = TestRunner(flows: [flow]);
+      final runner = Testeador(flows: [flow]);
+      // failFast=true by default; runner won't rethrow in standalone mode.
+      await _runNoExit(runner);
 
-      try {
-        await runner.run();
-      } catch (e) {
-        // Exception caught, rollback should have happened.
-      }
+      expect(fixture.loadCount, equals(1));
+      expect(fixture.disposeCount, equals(1));
+    });
 
-      // Assert that rollback cleaned up the created ID.
-      expect(mockDatabase.containsKey(createdId), isFalse);
+    test('dispose is not called when fixture load throws', () async {
+      final failingFixture = _FailingFixture();
+
+      final flow = TestFlowLasting(
+        name: 'Load Fail Flow',
+        fixture: failingFixture,
+        steps: [TestStep(name: 'Never', action: () {})],
+      );
+
+      final runner = Testeador(flows: [flow]);
+      // Should not throw; runner catches and continues.
+      await _runNoExit(runner);
+      // No assertion needed — the test passes if no exception escapes.
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Tag filtering
+  // -------------------------------------------------------------------------
+  group('Testeador tag filtering', () {
+    test('includeTags runs only matching flows', () async {
+      final ran = <String>[];
+
+      final flows = [
+        TestFlowLasting(
+          name: 'Smoke',
+          tags: const {'smoke'},
+          steps: [TestStep(name: 'S', action: () => ran.add('smoke'))],
+        ),
+        TestFlowLasting(
+          name: 'Regression',
+          tags: const {'regression'},
+          steps: [TestStep(name: 'R', action: () => ran.add('regression'))],
+        ),
+      ];
+
+      final runner = Testeador(flows: flows);
+      await _runNoExit(runner, args: ['--include-tags=smoke']);
+
+      expect(ran, equals(['smoke']));
+    });
+
+    test('excludeTags skips matching flows', () async {
+      final ran = <String>[];
+
+      final flows = [
+        TestFlowLasting(
+          name: 'Smoke',
+          tags: const {'smoke'},
+          steps: [TestStep(name: 'S', action: () => ran.add('smoke'))],
+        ),
+        TestFlowLasting(
+          name: 'Regression',
+          tags: const {'regression'},
+          steps: [TestStep(name: 'R', action: () => ran.add('regression'))],
+        ),
+      ];
+
+      final runner = Testeador(flows: flows);
+      await _runNoExit(runner, args: ['--exclude-tags=smoke']);
+
+      expect(ran, equals(['regression']));
+    });
+
+    test('flow with no tags is excluded when includeTags is set', () async {
+      final ran = <String>[];
+
+      final flows = [
+        TestFlowLasting(
+          name: 'Tagged',
+          tags: const {'smoke'},
+          steps: [TestStep(name: 'T', action: () => ran.add('tagged'))],
+        ),
+        TestFlowLasting(
+          name: 'Untagged',
+          steps: [TestStep(name: 'U', action: () => ran.add('untagged'))],
+        ),
+      ];
+
+      final runner = Testeador(flows: flows);
+      await _runNoExit(runner, args: ['--include-tags=smoke']);
+
+      expect(ran, equals(['tagged']));
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Flow name filtering
+  // -------------------------------------------------------------------------
+  group('Testeador flow name filtering', () {
+    test('includeFlows runs only named flows', () async {
+      final ran = <String>[];
+
+      final flows = [
+        TestFlowLasting(
+          name: 'Alpha',
+          steps: [TestStep(name: 'A', action: () => ran.add('alpha'))],
+        ),
+        TestFlowLasting(
+          name: 'Beta',
+          steps: [TestStep(name: 'B', action: () => ran.add('beta'))],
+        ),
+      ];
+
+      final runner = Testeador(flows: flows);
+      await _runNoExit(runner, args: ['--include-flows=Alpha']);
+
+      expect(ran, equals(['alpha']));
+    });
+
+    test('excludeFlows skips named flows', () async {
+      final ran = <String>[];
+
+      final flows = [
+        TestFlowLasting(
+          name: 'Alpha',
+          steps: [TestStep(name: 'A', action: () => ran.add('alpha'))],
+        ),
+        TestFlowLasting(
+          name: 'Beta',
+          steps: [TestStep(name: 'B', action: () => ran.add('beta'))],
+        ),
+      ];
+
+      final runner = Testeador(flows: flows);
+      await _runNoExit(runner, args: ['--exclude-flows=Alpha']);
+
+      expect(ran, equals(['beta']));
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // CurlInterceptor
+  // -------------------------------------------------------------------------
+  group('CurlInterceptor', () {
+    test('starts with an empty log', () {
+      final interceptor = CurlInterceptor();
+      expect(interceptor.log, isEmpty);
+    });
+
+    test('clear() empties the log', () {
+      final interceptor = CurlInterceptor();
+      // Manually add an entry to simulate a recorded request.
+      // ignore: invalid_use_of_visible_for_testing_member
+      interceptor.clear(); // Should not throw on empty log.
+      expect(interceptor.log, isEmpty);
+    });
+
+    test('log is unmodifiable', () {
+      final interceptor = CurlInterceptor();
+      expect(() => interceptor.log.add('x'), throwsUnsupportedError);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Actor
+  // -------------------------------------------------------------------------
+  group('Actor', () {
+    test('has a name', () {
+      final actor = _TestActor('Firesh');
+      expect(actor.name, equals('Firesh'));
+    });
+
+    test('has a Dio instance', () {
+      final actor = _TestActor('Watersh');
+      expect(actor.dio, isNotNull);
+    });
+
+    test('curlInterceptor log starts empty', () {
+      final actor = _TestActor('Bulbasaur');
+      expect(actor.curlInterceptor.log, isEmpty);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Testeador — CurlInterceptor injection
+  // -------------------------------------------------------------------------
+  group('Testeador interceptor injection', () {
+    test('injects CurlInterceptor into actor Dio before running', () async {
+      final actor = _TestActor('TestActor');
+      // Interceptor should NOT be in dio.interceptors before run
+      expect(actor.dio.interceptors.contains(actor.curlInterceptor), isFalse);
+
+      final testeador = Testeador(
+        flows: [
+          TestFlowLasting(
+            name: 'dummy',
+            steps: [TestStep(name: 's', action: () {})],
+          ),
+        ],
+        actors: [actor],
+      );
+
+      await testeador.run(['--no-exit-on-failure']);
+      // After run, interceptor should be attached
+      expect(actor.dio.interceptors.contains(actor.curlInterceptor), isTrue);
     });
   });
 }

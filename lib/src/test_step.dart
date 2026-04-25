@@ -1,7 +1,10 @@
 import 'dart:async';
 
 /// {@template test_step}
-/// A single unit of a test flow.
+/// A single named action within a `TestFlow`.
+///
+/// The [action] is a zero-argument async callback. Context (actors, fixtures,
+/// repositories) is captured via closure at the call site.
 /// {@endtemplate}
 class TestStep {
   /// {@macro test_step}
@@ -11,17 +14,15 @@ class TestStep {
     this.description,
   });
 
-  /// The name of the test step.
+  /// Short name shown in output (maps to a `test()` label).
   final String name;
 
-  /// A description of what this step does.
+  /// Optional longer description.
   final String? description;
 
-  /// The action to be performed in this step.
+  /// The async action to execute.
   final FutureOr<void> Function() action;
 
-  /// Executes the test step.
-  Future<void> execute() async {
-    await action();
-  }
+  /// Executes the step.
+  Future<void> execute() async => action();
 }

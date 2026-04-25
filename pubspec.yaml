@@ -1,12 +1,16 @@
 name: testeador
-description: A Very Good Project created by Very Good CLI.
-version: 0.1.0+1
+description: Sequential integration test orchestrator for Dart CI/CD pipelines.
+version: 0.2.0
 publish_to: none
 
 environment:
   sdk: ^3.11.0
 
+dependencies:
+  args: ^2.4.0
+  dio: ^5.0.0
+  test: ^1.31.0
+
 dev_dependencies:
   mocktail: ^1.0.5
-  test: ^1.31.0
   very_good_analysis: ^10.2.0

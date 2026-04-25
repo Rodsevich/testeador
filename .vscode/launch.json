@@ -1,0 +1,52 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "dart",
+      "request": "launch",
+      "name": "PokéBattle App (Chrome)",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}/example",
+      "args": ["-d", "chrome"]
+    },
+    {
+      "type": "dart",
+      "request": "launch",
+      "name": "PokéBattle App (Web Server)",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}/example",
+      "args": ["-d", "web-server", "--web-port", "8080"]
+    },
+    {
+      "type": "dart",
+      "request": "launch",
+      "name": "Run Integration Tests",
+      "program": "bin/run_tests.dart",
+      "cwd": "${workspaceFolder}/example",
+      "args": ["--verbose"]
+    },
+    {
+      "type": "dart",
+      "request": "launch",
+      "name": "Run Integration Tests (smoke only)",
+      "program": "bin/run_tests.dart",
+      "cwd": "${workspaceFolder}/example",
+      "args": ["--include-tags", "smoke", "--verbose"]
+    },
+    {
+      "type": "dart",
+      "request": "launch",
+      "name": "Run Client Integration Tests",
+      "program": "example/test/client_integration_test.dart",
+      "cwd": "${workspaceFolder}/example",
+      "args": ["--verbose"]
+    },
+    {
+      "type": "dart",
+      "request": "launch",
+      "name": "Run API Client Tests (dart test)",
+      "program": "example/test/api_client_test.dart",
+      "cwd": "${workspaceFolder}/example"
+    }
+  ]
+}
