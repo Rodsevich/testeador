@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:testeador_example/ui/registration_screen.dart';
+import 'package:testeador_example/ui/auth_screen.dart';
 
 /// Root widget of the PokéBattle app.
 class PokeBattleApp extends StatelessWidget {
@@ -14,7 +14,7 @@ class PokeBattleApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
         useMaterial3: true,
       ),
-      home: const RegistrationScreen(),
+      home: const AuthScreen(),
     );
   }
 }

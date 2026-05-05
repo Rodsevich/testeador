@@ -1,12 +1,25 @@
+// Per-method regression flows for the data and domain layers.
+//
+// These flows exhaustively exercise every public method of PokeApiClient,
+// BattleApiClient, PokemonRepository and BattleRepository. They are tagged
+// `regression` (not `smoke`) because they are intentionally redundant with
+// the multi-actor flows in flows/{fire_team,water_team,battle}_flow.dart:
+// the multi-actor flows prove the contract is alive end-to-end; these
+// flows pinpoint *which* method broke when the smoke run fails.
+//
+// Run them in CI for releases / nightly builds:
+//     dart run example/bin/run_tests.dart --include-tags regression
+
 import 'package:dio/dio.dart';
 import 'package:test/test.dart';
 import 'package:testeador/testeador.dart';
 import 'package:testeador_example/data/api_client.dart';
+import 'package:testeador_example/domain/models.dart';
 import 'package:testeador_example/domain/repositories.dart';
 
+import '../fixtures/session_fixture.dart';
+
 /// A minimal [Actor] used internally by the client integration flows.
-///
-/// Not part of the public test API — each flow creates its own instance.
 class _IntegrationActor extends Actor {
   _IntegrationActor(String name) : super(name: name, dio: Dio());
 }
@@ -19,7 +32,7 @@ TestFlowLasting buildPokeApiClientFlow() {
 
   return TestFlowLasting(
     name: 'PokeApiClient — fetchPokemon',
-    tags: {'client', 'pokeapi', 'smoke'},
+    tags: {'client', 'pokeapi', 'regression'},
     steps: [
       TestStep(
         name: 'fetches charizard with correct name and fire type',
@@ -61,34 +74,31 @@ TestFlowLasting buildPokeApiClientFlow() {
 }
 
 /// Builds a [TestFlowLasting] that tests every method of [BattleApiClient]
-/// against the real restful-api.dev backend (`https://api.restful-api.dev`).
+/// against the real restful-api.dev backend.
 ///
-/// Uses a unique timestamp suffix on player names to avoid collisions between
-/// concurrent test runs on the shared backend.
-///
-/// Note: `GET /objects` on restful-api.dev only returns pre-seeded objects,
-/// not user-created ones. The `listPlayers` and `listBattles` steps therefore
-/// only verify that the response is a [List] — they do not search for
-/// user-created records.
+/// Uses an [AuthFixture] to register a unique test user before the steps run,
+/// giving each flow run its own isolated private collection.
 TestFlowLasting buildBattleApiClientFlow() {
-  final actor = _IntegrationActor('BattleApiTester');
-  final client = BattleApiClient(actor.dio);
+  final dio = Dio();
+  AuthUser? authUser;
+  BattleApiClient client() => BattleApiClient(dio, token: authUser!.token);
 
   String? registeredPlayerId;
   String? battleId;
-  final testPlayerName = 'TestPlayer_${DateTime.now().millisecondsSinceEpoch}';
-  final testOpponentName =
-      'TestOpponent_${DateTime.now().millisecondsSinceEpoch}';
+  final ts = DateTime.now().millisecondsSinceEpoch;
+  final testPlayerName = 'TestPlayer_$ts';
+  final testOpponentName = 'TestOpponent_$ts';
   final testTeam = ['pikachu', 'mewtwo', 'gengar'];
 
   return TestFlowLasting(
     name: 'BattleApiClient — full CRUD',
-    tags: {'client', 'battle-api', 'smoke'},
+    tags: {'client', 'battle-api', 'regression'},
+    fixture: AuthFixture(onLoad: (u) => authUser = u),
     steps: [
       TestStep(
         name: 'registerPlayer creates a player and returns it with an id',
         action: () async {
-          final player = await client.registerPlayer(
+          final player = await client().registerPlayer(
             actorName: testPlayerName,
             pokemonNames: [
               'charizard',
@@ -107,21 +117,22 @@ TestFlowLasting buildBattleApiClientFlow() {
         },
       ),
       TestStep(
-        name: 'listPlayers returns a list',
-        description:
-            'restful-api.dev GET /objects only returns pre-seeded objects, '
-            'not user-created ones. We verify the response is a List.',
+        name: 'listPlayers includes the registered player',
         action: () async {
-          final players = await client.listPlayers();
-          expect(players, isA<List<Object?>>());
-          // Suppress unused variable warning.
-          expect(registeredPlayerId, isNotNull);
+          final players = await client().listPlayers();
+          expect(
+            players.map((Player p) => p.id),
+            contains(registeredPlayerId),
+          );
+          final found =
+              players.firstWhere((Player p) => p.id == registeredPlayerId);
+          expect(found.name, equals(testPlayerName));
         },
       ),
       TestStep(
         name: 'createBattle creates a battle and returns it with an id',
         action: () async {
-          final battle = await client.createBattle(
+          final battle = await client().createBattle(
             challengerName: testPlayerName,
             opponentName: testOpponentName,
             challengerTeam: testTeam,
@@ -136,7 +147,7 @@ TestFlowLasting buildBattleApiClientFlow() {
       TestStep(
         name: 'getBattle fetches the battle by id with correct data',
         action: () async {
-          final battle = await client.getBattle(battleId!);
+          final battle = await client().getBattle(battleId!);
           expect(battle.id, equals(battleId));
           expect(battle.challengerName, equals(testPlayerName));
           expect(battle.opponentName, equals(testOpponentName));
@@ -144,13 +155,12 @@ TestFlowLasting buildBattleApiClientFlow() {
         },
       ),
       TestStep(
-        name: 'listBattles returns a list',
-        description:
-            'restful-api.dev GET /objects only returns pre-seeded objects, '
-            'not user-created ones. We verify the response is a List.',
+        name: 'listBattles includes the created battle',
         action: () async {
-          final battles = await client.listBattles();
-          expect(battles, isA<List<Object?>>());
+          final battles = await client().listBattles();
+          expect(battles.map((Battle b) => b.id), contains(battleId));
+          final found = battles.firstWhere((Battle b) => b.id == battleId);
+          expect(found.challengerName, equals(testPlayerName));
         },
       ),
     ],
@@ -160,23 +170,23 @@ TestFlowLasting buildBattleApiClientFlow() {
 /// Builds a [TestFlowLasting] that tests [PokemonRepository] and
 /// [BattleRepository] — the higher-level wrappers over the API clients.
 ///
-/// Uses a unique timestamp suffix on player names to avoid collisions between
-/// concurrent test runs on the shared backend.
-///
-/// Note: `GET /objects` on restful-api.dev only returns pre-seeded objects,
-/// not user-created ones. The `listPlayers` and `listBattles` steps therefore
-/// only verify that the response is a [List].
+/// Uses an [AuthFixture] to register a unique test user before steps run.
 TestFlowLasting buildRepositoryFlow() {
-  final actor = _IntegrationActor('RepoTester');
-  final pokemonRepo = PokemonRepository(actor.dio);
-  final battleRepo = BattleRepository(actor.dio);
+  final dio = Dio();
+  AuthUser? authUser;
+  final pokemonRepo = PokemonRepository(dio);
+  BattleRepository battleRepo() =>
+      BattleRepository(dio, token: authUser!.token);
 
-  final repoPlayerName = 'RepoPlayer_${DateTime.now().millisecondsSinceEpoch}';
+  final ts = DateTime.now().millisecondsSinceEpoch;
+  final repoPlayerName = 'RepoPlayer_$ts';
+  String? repoPlayerId;
   String? repoBattleId;
 
   return TestFlowLasting(
     name: 'Repositories — PokemonRepository and BattleRepository',
-    tags: {'client', 'repositories', 'smoke'},
+    tags: {'repository', 'regression'},
+    fixture: AuthFixture(onLoad: (u) => authUser = u),
     steps: [
       TestStep(
         name: 'PokemonRepository.getPokemon returns a Pokemon',
@@ -190,29 +200,27 @@ TestFlowLasting buildRepositoryFlow() {
       TestStep(
         name: 'BattleRepository.registerPlayer registers and returns a Player',
         action: () async {
-          final player = await battleRepo.registerPlayer(
+          final player = await battleRepo().registerPlayer(
             actorName: repoPlayerName,
             pokemonNames: ['snorlax', 'alakazam', 'machamp'],
           );
+          repoPlayerId = player.id;
           expect(player.id, isNotEmpty);
           expect(player.name, equals(repoPlayerName));
           expect(player.pokemonNames, hasLength(3));
         },
       ),
       TestStep(
-        name: 'BattleRepository.listPlayers returns a list',
-        description:
-            'restful-api.dev GET /objects only returns pre-seeded objects, '
-            'not user-created ones. We verify the response is a List.',
+        name: 'BattleRepository.listPlayers includes the registered player',
         action: () async {
-          final players = await battleRepo.listPlayers();
-          expect(players, isA<List<Object?>>());
+          final players = await battleRepo().listPlayers();
+          expect(players.map((Player p) => p.id), contains(repoPlayerId));
         },
       ),
       TestStep(
         name: 'BattleRepository.createBattle and getBattle round-trip',
         action: () async {
-          final battle = await battleRepo.createBattle(
+          final battle = await battleRepo().createBattle(
             challengerName: repoPlayerName,
             opponentName: 'SomeOpponent',
             challengerTeam: ['snorlax', 'alakazam', 'machamp'],
@@ -221,19 +229,16 @@ TestFlowLasting buildRepositoryFlow() {
           expect(battle.id, isNotEmpty);
           expect(battle.challengerTeam, hasLength(3));
 
-          final fetched = await battleRepo.getBattle(repoBattleId!);
+          final fetched = await battleRepo().getBattle(repoBattleId!);
           expect(fetched.id, equals(repoBattleId));
           expect(fetched.challengerName, equals(repoPlayerName));
         },
       ),
       TestStep(
-        name: 'BattleRepository.listBattles returns a list',
-        description:
-            'restful-api.dev GET /objects only returns pre-seeded objects, '
-            'not user-created ones. We verify the response is a List.',
+        name: 'BattleRepository.listBattles includes the created battle',
         action: () async {
-          final battles = await battleRepo.listBattles();
-          expect(battles, isA<List<Object?>>());
+          final battles = await battleRepo().listBattles();
+          expect(battles.map((Battle b) => b.id), contains(repoBattleId));
         },
       ),
     ],

@@ -1,0 +1,10 @@
+# Project Instructions
+
+This project uses agent-agnostic documentation. Read the following before any task:
+
+1. [`AGENTS.md`](AGENTS.md) — entry point and critical rules
+2. [`docs/PRD.md`](docs/PRD.md) — product context, scope, goals
+3. [`docs/memory-bank/`](docs/memory-bank/) — structured project memory (read `00` → `05` in order)
+4. [`docs/architecture.md`](docs/architecture.md) — technical specification
+
+Follow the rules in `AGENTS.md`, including the Multi-Agent Collaboration Protocol. Do not duplicate content from these docs in code or new markdown files.

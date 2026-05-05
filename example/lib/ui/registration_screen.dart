@@ -4,17 +4,19 @@ import 'package:testeador_example/domain/models.dart';
 import 'package:testeador_example/domain/repositories.dart';
 import 'package:testeador_example/ui/lobby_screen.dart';
 
-/// Screen where the user enters their name and picks 6 Pokémon.
+/// Screen where the authenticated user picks their 6 Pokémon team.
 class RegistrationScreen extends StatefulWidget {
-  /// Creates the [RegistrationScreen].
-  const RegistrationScreen({super.key});
+  /// Creates the [RegistrationScreen] for [authUser].
+  const RegistrationScreen({required this.authUser, super.key});
+
+  /// The authenticated user — provides the trainer name and JWT token.
+  final AuthUser authUser;
 
   @override
   State<RegistrationScreen> createState() => _RegistrationScreenState();
 }
 
 class _RegistrationScreenState extends State<RegistrationScreen> {
-  final _nameController = TextEditingController();
   final _dio = Dio();
   late final PokemonRepository _pokemonRepo;
   late final BattleRepository _battleRepo;
@@ -50,7 +52,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   void initState() {
     super.initState();
     _pokemonRepo = PokemonRepository(_dio);
-    _battleRepo = BattleRepository(_dio);
+    _battleRepo = BattleRepository(_dio, token: widget.authUser.token);
     _loadPokemon();
   }
 
@@ -72,18 +74,20 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   Future<void> _register() async {
-    final name = _nameController.text.trim();
-    if (name.isEmpty || _selected.length != 6) return;
+    if (_selected.length != 6) return;
     setState(() => _registering = true);
     try {
       final player = await _battleRepo.registerPlayer(
-        actorName: name,
+        actorName: widget.authUser.name,
         pokemonNames: _selected.toList(),
       );
       if (!mounted) return;
       await Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
-          builder: (_) => LobbyScreen(currentPlayer: player),
+          builder: (_) => LobbyScreen(
+            currentPlayer: player,
+            authUser: widget.authUser,
+          ),
         ),
       );
     } catch (e) {
@@ -95,16 +99,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('PokéBattle — Register'),
+        title: Text('PokéBattle — ${widget.authUser.name}'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: _loading
@@ -121,15 +119,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      TextField(
-                        controller: _nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Your trainer name',
-                          border: OutlineInputBorder(),
-                        ),
-                        onChanged: (_) => setState(() {}),
-                      ),
-                      const SizedBox(height: 12),
                       Text(
                         'Select your 6 Pokémon (${_selected.length}/6)',
                         style: Theme.of(context).textTheme.titleMedium,
@@ -147,7 +136,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           itemCount: _available.length,
                           itemBuilder: (context, i) {
                             final pokemon = _available[i];
-                            final isSelected = _selected.contains(pokemon.name);
+                            final isSelected =
+                                _selected.contains(pokemon.name);
                             return GestureDetector(
                               onTap: () {
                                 setState(() {
@@ -213,9 +203,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                           style: const TextStyle(color: Colors.red),
                         ),
                       FilledButton(
-                        onPressed: _nameController.text.trim().isNotEmpty &&
-                                _selected.length == 6 &&
-                                !_registering
+                        onPressed: _selected.length == 6 && !_registering
                             ? _register
                             : null,
                         child: _registering
@@ -226,7 +214,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text('Register & Enter Lobby'),
+                            : const Text('Enter Lobby'),
                       ),
                     ],
                   ),

@@ -8,10 +8,17 @@ import 'package:testeador_example/ui/create_battle_screen.dart';
 /// Lobby showing all players and available battles.
 class LobbyScreen extends StatefulWidget {
   /// Creates the [LobbyScreen] for [currentPlayer].
-  const LobbyScreen({required this.currentPlayer, super.key});
+  const LobbyScreen({
+    required this.currentPlayer,
+    required this.authUser,
+    super.key,
+  });
 
   /// The player who just registered.
   final Player currentPlayer;
+
+  /// The authenticated user — provides the JWT token for API calls.
+  final AuthUser authUser;
 
   @override
   State<LobbyScreen> createState() => _LobbyScreenState();
@@ -29,7 +36,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   @override
   void initState() {
     super.initState();
-    _battleRepo = BattleRepository(_dio);
+    _battleRepo = BattleRepository(_dio, token: widget.authUser.token);
     _refresh();
   }
 

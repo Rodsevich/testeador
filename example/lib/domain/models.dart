@@ -1,3 +1,29 @@
+/// An authenticated user with a JWT token.
+class AuthUser {
+  /// Creates an [AuthUser].
+  const AuthUser({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.token,
+  });
+
+  /// The user ID assigned by the auth service.
+  final String id;
+
+  /// The user's display name.
+  final String name;
+
+  /// The user's email address.
+  final String email;
+
+  /// The JWT bearer token for authenticated requests.
+  final String token;
+
+  @override
+  String toString() => 'AuthUser(id: $id, name: $name, email: $email)';
+}
+
 /// A Pokémon with its name, types, and sprite URL.
 class Pokemon {
   /// Creates a [Pokemon] with the given [name], [types], and [spriteUrl].
