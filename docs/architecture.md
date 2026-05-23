@@ -188,7 +188,7 @@ abstract class Actor {
 Subclass `Actor` to define a concrete actor with its own `Dio` instance:
 
 ```dart
-// example/test/actors.dart
+// example/pokebattle_rest/test/actors.dart
 class FireshActor extends Actor {
   FireshActor() : super(
     name: 'Firesh',
@@ -487,10 +487,10 @@ lib/
     └── test_step.dart          # TestStep class
 ```
 
-### Example (`example/`)
+### Example (`example/pokebattle_rest/`)
 
 ```
-example/
+example/pokebattle_rest/
 ├── pubspec.yaml                    # depends on testeador, dio
 ├── bin/
 │   └── run_tests.dart              # Entry point: Testeador(...).run(args)
@@ -545,7 +545,7 @@ Actors:
 - **Firesh** — manages a fire-type team (Charizard, Arcanine, Flareon, Rapidash, Magmar, Ninetales).
 - **Watersh** — manages a water-type team (Blastoise, Vaporeon, Gyarados, Starmie, Lapras, Cloyster).
 
-### Step 1 — Actors (`example/test/actors.dart`)
+### Step 1 — Actors (`example/pokebattle_rest/test/actors.dart`)
 
 ```dart
 import 'package:dio/dio.dart';
@@ -574,7 +574,7 @@ Three flows run in sequence:
 **`buildBattleFlow()`** — Firesh selects 3 Pokémon and issues a battle challenge; Watersh views it and confirms she sees who she fights and with what Pokémon.
 
 ```dart
-// example/test/flows/fire_team_flow.dart
+// example/pokebattle_rest/test/flows/fire_team_flow.dart
 TestFlowLasting buildFireTeamFlow() {
   final actor = firesh();
   final battleRepo = BattleRepository(actor.dio); // actor.dio captures cURLs
@@ -609,7 +609,7 @@ TestFlowLasting buildFireTeamFlow() {
 }
 ```
 
-### Step 3 — Entry point (`example/bin/run_tests.dart`)
+### Step 3 — Entry point (`example/pokebattle_rest/bin/run_tests.dart`)
 
 ```dart
 import 'package:testeador/testeador.dart';
@@ -633,9 +633,9 @@ Future<void> main(List<String> args) async {
 }
 ```
 
-Run: `dart run example/bin/run_tests.dart --include-tags smoke --verbose`
+Run: `dart run example/pokebattle_rest/bin/run_tests.dart --include-tags smoke --verbose`
 
-Compile: `dart compile exe example/bin/run_tests.dart -o bin/test_runner`
+Compile: `dart compile exe example/pokebattle_rest/bin/run_tests.dart -o bin/test_runner`
 
 ---
 

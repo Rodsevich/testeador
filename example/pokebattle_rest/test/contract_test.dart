@@ -14,6 +14,7 @@ import 'actors.dart';
 import 'flows/battle_flow.dart';
 import 'flows/client_integration_flows.dart';
 import 'flows/fire_team_flow.dart';
+import 'flows/smoke_journey_flow.dart';
 import 'flows/water_team_flow.dart';
 
 void main() {
@@ -23,6 +24,8 @@ void main() {
   Testeador(
     actors: [fireshActor, watershActor],
     flows: [
+      // Smoke: full end-to-end happy path across every important feature.
+      buildSmokeJourneyFlow(),
       // Smoke: multi-actor business flows.
       buildFireTeamFlow(),
       buildWaterTeamFlow(),

@@ -30,6 +30,7 @@ import '../test/actors.dart';
 import '../test/flows/battle_flow.dart';
 import '../test/flows/client_integration_flows.dart';
 import '../test/flows/fire_team_flow.dart';
+import '../test/flows/smoke_journey_flow.dart';
 import '../test/flows/water_team_flow.dart';
 
 Future<void> main(List<String> args) async {
@@ -39,6 +40,8 @@ Future<void> main(List<String> args) async {
   await Testeador(
     actors: [fireshActor, watershActor],
     flows: [
+      // Smoke: full end-to-end happy path across every important feature.
+      buildSmokeJourneyFlow(),
       // Smoke: multi-actor business flows.
       buildFireTeamFlow(),
       buildWaterTeamFlow(),

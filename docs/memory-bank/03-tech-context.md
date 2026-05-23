@@ -21,7 +21,7 @@
 ```bash
 dart pub get
 dart test lib/src/ # run testeador's own tests
-dart run example/bin/run_tests.dart # run the Pokémon example
+dart run example/pokebattle_rest/bin/run_tests.dart # run the Pokémon example
 ```
 
 ### Standalone Binary
@@ -87,7 +87,7 @@ testeador/
 │       ├── testeador.dart            # Orchestrator (CLI + registerWithDartTest)
 │       ├── testeador_options.dart
 │       └── [other implementations]
-├── example/                          # Pokémon battle example
+├── example/pokebattle_rest/                          # Pokémon battle example
 │   ├── bin/
 │   │   └── run_tests.dart            # CLI entry point
 │   ├── lib/

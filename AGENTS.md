@@ -30,9 +30,9 @@ These rules are non-negotiable. They are the contract between this codebase and 
 
 | Task | Where to look |
 |---|---|
-| Create a new test flow | [`docs/architecture.md`](docs/architecture.md) §TestFlow + §TestStep; mirror patterns in `example/test/flows/` |
-| Add a new Actor | [`docs/architecture.md`](docs/architecture.md) §Actor; mirror patterns in `example/test/actors.dart` |
-| Run the example suite | [`example/README.md`](example/README.md) |
+| Create a new test flow | [`docs/architecture.md`](docs/architecture.md) §TestFlow + §TestStep; mirror patterns in `example/pokebattle_rest/test/flows/` |
+| Add a new Actor | [`docs/architecture.md`](docs/architecture.md) §Actor; mirror patterns in `example/pokebattle_rest/test/actors.dart` |
+| Run the example suite | [`example/pokebattle_rest/README.md`](example/pokebattle_rest/README.md) |
 | Configure CLI flags | [`README.md`](README.md) §CLI flags or [`docs/architecture.md`](docs/architecture.md) §Testeador |
 | Understand the problem domain | [`docs/PROBLEM.md`](docs/PROBLEM.md) |
 | Plan future work | [`roadmap.md`](roadmap.md) and [`docs/PRD.md`](docs/PRD.md) §Scope |
