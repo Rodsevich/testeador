@@ -1,0 +1,7 @@
+### A battle challenge from one trainer to another.
+class: Battle
+fields:
+  id: String
+  challengerName: String
+  opponentName: String
+  challengerTeam: List<String>

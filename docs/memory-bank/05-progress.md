@@ -34,18 +34,33 @@
 - [x] Header redaction (default: authorization, cookie; customizable per actor).
 - [x] Standalone binary compilation (dart compile exe).
 
-### Example
+### Example (REST)
 - [x] Pokémon battle scenario with two actors (Firesh, Watersh).
 - [x] Three flows (fire team registration, water team registration, battle challenge).
 - [x] Integration with two real HTTP backends (PokéAPI, restful-api.dev).
 - [x] No mocks; all HTTP calls are real.
+
+### Example (Serverpod streaming)
+- [x] Mini Serverpod project at `example/pokebattle_serverpod/` (server + client + flutter).
+- [x] Streaming endpoints fan-out via `session.messages` (MessageCentral): `playerAdded`, `battleAdded`, `battleUpdates`.
+- [x] Flutter UI mirrors the REST example screens; lobby auto-updates with a `● Live` chip.
+- [x] Patrol agent flows (`register_and_land_in_lobby`, `register_player`, `create_battle`, `accept_battle`).
+- [x] testeador smoke flow drives Patrol on two devices in parallel and captures `evidence/<label>/composite.png` for each step.
+
+### Multi-device evidence (lib/src/multidev/)
+- [x] `TargetDevice` (`AndroidEmulator`, `IosSimulator`) abstraction with boot/shutdown/screenshot primitives.
+- [x] `DeviceFleet` orchestrator with `snapshot`, `snapshotComposite`, `runPatrolAcross`, `runPatrolOn`.
+- [x] `FlutterActor extends Actor` binds an HTTP persona to a device.
+- [x] `PatrolRunner` host-side subprocess wrapper.
+- [x] `ScreenshotComposer.sideBySide` produces a single horizontal PNG with per-device header strips (the canonical AI-review artifact).
+- [x] CLI `bin/snapshot_fleet.dart` for ad-hoc evidence capture.
 
 ### Documentation
 - [x] README.md (usage guide, quick start, CLI reference).
 - [x] docs/architecture.md (full technical spec with class diagrams).
 - [x] docs/PROBLEM.md (problem narrative in Spanish).
 - [x] roadmap.md (pains 2-7 driving evolution).
-- [x] example/README.md (example overview).
+- [x] example/pokebattle_rest/README.md (REST example overview).
 
 ## What's Unimplemented / TODO
 
@@ -132,8 +147,8 @@ For a feature to move from TODO to Done:
 ## Test Coverage Status
 
 - **testeador lib tests:** TBD (verify with `dart test lib/src/`).
-- **Example app tests:** Working (runs via `dart run example/bin/run_tests.dart`).
-- **Integration with dart test:** Verified (example/bin/run_tests.dart can be modified to use registerWithDartTest).
+- **Example app tests:** Working (runs via `dart run example/pokebattle_rest/bin/run_tests.dart`).
+- **Integration with dart test:** Verified (example/pokebattle_rest/bin/run_tests.dart can be modified to use registerWithDartTest).
 
 ## Evolution Roadmap
 

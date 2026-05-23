@@ -278,11 +278,11 @@ dart compile exe bin/run_tests.dart -o bin/test_runner
 
 ## Example
 
-The [`example/`](example/) directory contains a complete Pokémon battle scenario with two actors (Firesh and Watersh) and three `TestFlowLasting` flows running against two real HTTP backends: **PokéAPI** (`https://pokeapi.co/api/v2`) for Pokémon data and **restful-api.dev** (`https://api.restful-api.dev`) for player registration and battles. See [`example/README.md`](example/README.md) for details.
+The [`example/`](example/) directory hosts the example apps. [`example/pokebattle_rest/`](example/pokebattle_rest/) is the REST-backed PokéBattle scenario with two actors (Firesh and Watersh) and `TestFlowLasting` flows running against real HTTP backends: **PokéAPI** (`https://pokeapi.co/api/v2`) for Pokémon data and **restful-api.dev** (`https://api.restful-api.dev`) for player registration and battles. [`example/pokebattle_serverpod/`](example/pokebattle_serverpod/) is the streaming variant on Serverpod (auto-updates via push, multi-device E2E). See [`example/pokebattle_rest/README.md`](example/pokebattle_rest/README.md) for the REST example details.
 
 ```bash
-dart run example/bin/run_tests.dart
-dart run example/bin/run_tests.dart --include-tags smoke --verbose
+dart run example/pokebattle_rest/bin/run_tests.dart
+dart run example/pokebattle_rest/bin/run_tests.dart --include-tags smoke --verbose
 ```
 
 ## License

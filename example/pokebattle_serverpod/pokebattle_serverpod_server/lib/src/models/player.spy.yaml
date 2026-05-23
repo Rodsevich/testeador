@@ -1,0 +1,6 @@
+### A registered trainer with their 6-Pokémon pool.
+class: Player
+fields:
+  id: String
+  name: String
+  pokemonNames: List<String>

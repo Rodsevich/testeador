@@ -1,0 +1,15 @@
+auth:
+  - register:
+  - login:
+battles:
+  - createBattle:
+  - getBattle:
+  - listBattles:
+  - battleAdded:
+  - battleUpdates:
+players:
+  - registerPlayer:
+  - listPlayers:
+  - playerAdded:
+pokemon:
+  - getPokemon:

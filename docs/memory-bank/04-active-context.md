@@ -2,58 +2,42 @@
 
 **Update this file when:** New work begins, priorities shift, or blockers are resolved.
 
-**Last Updated:** 2026-04-28
+**Last Updated:** 2026-05-23
 
 ---
 
-## Current Uncommitted Work
+## Current Focus
 
-The working tree contains modifications to example app files (visible in `git status`):
+Multi-device streaming example just landed. The repo now has two examples and a public multidev API:
 
-**Modified files:**
-- `example/lib/data/api_client.dart`
-- `example/lib/domain/models.dart`
-- `example/lib/domain/repositories.dart`
-- `example/lib/ui/app.dart`
-- `example/lib/ui/lobby_screen.dart`
-- `example/lib/ui/registration_screen.dart`
-- `example/test/api_client_test.dart`
-- `example/test/client_integration_test.dart`
-- `example/test/flows/battle_flow.dart`
-- `example/test/flows/client_integration_flows.dart`
-- `example/test/flows/fire_team_flow.dart`
-- `example/test/flows/water_team_flow.dart`
-
-**Untracked (new) files:**
-- `example/lib/ui/auth_screen.dart`
-- `example/test/fixtures/session_fixture.dart`
-
-See `git status` for current state.
+- `example/pokebattle_rest/` — the original REST example (renamed from `example/`). HTTP smoke flow unchanged; only the testeador path in its pubspec was bumped to `../../`.
+- `example/pokebattle_serverpod/` — new Serverpod streaming example. Three sub-packages (`_server`, `_client`, `_flutter`). The Flutter app mirrors the REST example screen-by-screen but the lobby auto-updates via `playerAdded` / `battleAdded` streams (the AppBar shows a `● Live` chip to distinguish it).
+- `lib/src/multidev/` — public API for orchestrating N emulators/simulators in parallel: `TargetDevice` / `AndroidEmulator` / `IosSimulator`, `DeviceFleet`, `FlutterActor`, `PatrolRunner`, `ScreenshotBundle`, `ScreenshotComposer` (side-by-side composite). Re-exported from `lib/testeador.dart`.
 
 ## Active Decision Points
 
-None currently open. See `docs/PRD.md` for "Open Questions" section (e.g., TestFlowTransient rollback strategy, pub.dev publication blockers).
+- **Patrol granularity.** Patrol's API (taps, screenshots) lives inside `patrolTest` blocks — there is no remote channel a host process can use. testeador therefore invokes Patrol once per "agent flow" (a coherent UI scenario) per device as parallel subprocesses, and takes screenshots from the host via `adb`/`xcrun simctl` after each step. If a future Patrol release exposes a remote driver, the `PatrolRunner` indirection can be swapped without touching the smoke flows.
+- **In-memory store in the Serverpod `_server`.** The mini Serverpod template skips Postgres; we keep all state in `InMemoryStore` so the example boots in seconds. Switch to a real DB if persistence across server restarts is needed.
 
 ## Recent Work Summary (from commits)
 
-- **207d9cf (sorp):** Recent commit message (unclear scope; check git log for details).
-- **15d3968 (sorp):** Earlier work.
-- **645757b:** Merged PR #1 from feature/testeador-core-17085447701404971552.
-- **3232e69:** Implement core classes and runner.
+- **2026-05-23 (uncommitted):** Streaming example + multidev API as described above. See `git status` and `git diff` for the exact files.
+- **1d0488e:** REST example added auth layer and private collections.
+- **6c01541:** REST example client integration + contract tests.
 
 ## Next Steps (Provisional)
 
-Based on v1.0 roadmap in PRD:
-1. Resolve TestFlowTransient rollback strategy (gather usage data from example app).
-2. Prepare pub.dev publication (audit API, docs, licensing).
-3. Add more example scenarios (persistent state across flows, error handling).
-4. Improve error messages and debugging ergonomics.
+1. Verify end-to-end on two booted emulators (`dart test test/contract_test.dart -N streaming` from `example/pokebattle_serverpod/pokebattle_serverpod_flutter/`).
+2. Capture sample `evidence/<label>/composite.png` for the README so reviewers can preview the format.
+3. Consider extracting `DeviceFleet` documentation into `docs/architecture.md` once the API stabilises (currently doc-commented inline).
+4. Original v1.0 roadmap still pending (TestFlowTransient rollback, pub.dev prep).
 
 ## Known Blockers
 
-- **TestFlowTransient rollback:** Decision deferred pending real-world usage patterns from example app.
-- **Pub.dev publication:** Likely blockers TBD (license clarity, CoC, API stability assessment).
+- **TestFlowTransient rollback:** Still deferred (predates streaming work).
+- **Pub.dev publication:** Still deferred. The multidev API adds new dependencies (`image`) and platform expectations (`adb`/`xcrun simctl` on PATH) that need acknowledgement in the README and CI before publication.
 
 ## Team Notes
 
-None currently recorded. Add notes here as the team encounters decisions, learnings, or clarifications that affect ongoing work.
+- Streaming smoke flow expects both `emulator-5554` and `emulator-5556` to be booted with the Flutter app installed. The CLI `dart run bin/snapshot_fleet.dart <label>` is the quickest way to validate device wiring without running a full test.
+- Composite images live under `evidence/<label>/composite.png`. The folder is git-ignored except for its README — never commit PNGs.

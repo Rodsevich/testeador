@@ -1,0 +1,7 @@
+### Authenticated trainer. Lasts only for the in-memory dev server.
+class: AuthUser
+fields:
+  id: String
+  name: String
+  email: String
+  token: String

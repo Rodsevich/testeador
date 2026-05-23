@@ -1,0 +1,6 @@
+### A Pokémon fetched from PokéAPI on the server side.
+class: Pokemon
+fields:
+  name: String
+  types: List<String>
+  spriteUrl: String

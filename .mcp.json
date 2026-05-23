@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "dart": {
+      "command": "dart",
+      "args": ["mcp-server"]
+    },
+    "patrol": {
+      "command": "./.claude/run-patrol",
+      "env": {
+        "PROJECT_ROOT": "./example/pokebattle_rest",
+        "PATROL_FLAGS": "",
+        "SHOW_TERMINAL": "false"
+      }
+    },
+    "serverpod": {
+      "command": "serverpod_mcp",
+      "args": []
+    }
+  }
+}

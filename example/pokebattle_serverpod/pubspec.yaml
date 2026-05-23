@@ -1,0 +1,11 @@
+name: _
+publish_to: none
+
+environment:
+  sdk: '^3.8.0'
+
+workspace:
+  - pokebattle_serverpod_client
+  - pokebattle_serverpod_server
+  - pokebattle_serverpod_flutter
+
