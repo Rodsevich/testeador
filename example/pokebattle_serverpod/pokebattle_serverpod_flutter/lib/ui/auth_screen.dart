@@ -25,11 +25,66 @@ class _AuthScreenState extends State<AuthScreen>
   bool _loading = false;
   String? _error;
 
+  /// When set via `--dart-define=AUTO_LOGIN_EMAIL=...`, the screen
+  /// auto-registers the trainer at boot and jumps straight to
+  /// [RegistrationScreen] / [LobbyScreen]. Used by the multi-device E2E run
+  /// so each emulator/simulator starts already inside the lobby — that way
+  /// the stream-driven UI is what the side-by-side composites capture.
+  static const _autoLoginEmail =
+      String.fromEnvironment('AUTO_LOGIN_EMAIL');
+  static const _autoLoginPassword =
+      String.fromEnvironment('AUTO_LOGIN_PASSWORD');
+  static const _autoLoginName =
+      String.fromEnvironment('AUTO_LOGIN_NAME');
+
   @override
   void initState() {
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
     _tabs.addListener(() => setState(() => _error = null));
+    if (_autoLoginEmail.isNotEmpty &&
+        _autoLoginPassword.isNotEmpty &&
+        _autoLoginName.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _autoLogin());
+    }
+  }
+
+  Future<void> _autoLogin() async {
+    if (!mounted) return;
+    setState(() => _loading = true);
+    try {
+      AuthUser user;
+      try {
+        user = await widget.client.auth.register(
+          _autoLoginName, _autoLoginEmail, _autoLoginPassword,
+        );
+      } on Exception {
+        // Already registered (subsequent hot-restart). Fall back to login.
+        user = await widget.client.auth.login(
+          _autoLoginEmail, _autoLoginPassword,
+        );
+      }
+      final players = await widget.client.players.listPlayers();
+      final existing = players.where((p) => p.name == user.name).firstOrNull;
+      if (!mounted) return;
+      await Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => existing != null
+              ? LobbyScreen(
+                  client: widget.client,
+                  currentPlayer: existing,
+                  authUser: user,
+                )
+              : RegistrationScreen(client: widget.client, authUser: user),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Auto-login failed: $e';
+        _loading = false;
+      });
+    }
   }
 
   Future<void> _submit() async {

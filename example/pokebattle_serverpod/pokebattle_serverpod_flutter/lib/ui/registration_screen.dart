@@ -43,6 +43,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     'snorlax',
   ];
 
+  /// When set via `--dart-define=AUTO_TEAM=name1,name2,...,name6`, the screen
+  /// auto-selects the six listed Pokémon and submits, jumping directly to
+  /// [LobbyScreen]. Used together with auto-login so the multi-device E2E
+  /// run boots straight into the stream-driven lobby UI.
+  static const _autoTeam = String.fromEnvironment('AUTO_TEAM');
+
   List<Pokemon> _available = [];
   final Set<String> _selected = {};
   bool _loading = true;
@@ -55,6 +61,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _loadPokemon();
   }
 
+  Future<void> _maybeAutoRegister() async {
+    if (_autoTeam.isEmpty) return;
+    final wanted = _autoTeam.split(',').map((s) => s.trim()).toList();
+    if (wanted.length != 6) return;
+    _selected
+      ..clear()
+      ..addAll(wanted);
+    await _register();
+  }
+
   Future<void> _loadPokemon() async {
     try {
       final results = await Future.wait(
@@ -64,6 +80,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         _available = results;
         _loading = false;
       });
+      await _maybeAutoRegister();
     } catch (e) {
       setState(() {
         _error = 'Failed to load Pokémon: $e';
