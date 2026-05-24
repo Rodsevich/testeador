@@ -26,6 +26,7 @@ void main() {
       buildServerStreamFlow(
         devices: const [
           AndroidEmulator(serial: 'emulator-5554'),
+          IosSimulator(udid: '731FF01A-89C6-49BF-A8C5-EEA637B3356E'),
         ],
       ),
       buildStreamingSmokeFlow(),
