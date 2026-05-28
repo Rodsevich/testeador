@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pokebattle_serverpod_client/pokebattle_serverpod_client.dart';
+import 'package:pokebattle_serverpod_flutter/data/pokemon_sprite_cache.dart';
 import 'package:pokebattle_serverpod_flutter/ui/lobby_screen.dart';
 
 /// Screen where the authenticated user picks their 6-Pokémon team.
@@ -7,12 +8,16 @@ class RegistrationScreen extends StatefulWidget {
   /// Creates the [RegistrationScreen].
   const RegistrationScreen({
     required this.client,
+    required this.spriteCache,
     required this.authUser,
     super.key,
   });
 
   /// The Serverpod client.
   final Client client;
+
+  /// Shared cache for Pokémon sprites.
+  final PokemonSpriteCache spriteCache;
 
   /// The authenticated user.
   final AuthUser authUser;
@@ -74,7 +79,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   Future<void> _loadPokemon() async {
     try {
       final results = await Future.wait(
-        _availableNames.map(widget.client.pokemon.getPokemon),
+        _availableNames.map(widget.spriteCache.get),
       );
       setState(() {
         _available = results;
@@ -102,6 +107,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         MaterialPageRoute<void>(
           builder: (_) => LobbyScreen(
             client: widget.client,
+            spriteCache: widget.spriteCache,
             currentPlayer: player,
             authUser: widget.authUser,
           ),

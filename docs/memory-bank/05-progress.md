@@ -55,8 +55,27 @@
 - [x] `ScreenshotComposer.sideBySide` produces a single horizontal PNG with per-device header strips (the canonical AI-review artifact).
 - [x] CLI `bin/snapshot_fleet.dart` for ad-hoc evidence capture.
 
+### MCP server (lib/src/mcp/, bin/testeador_mcp.dart)
+- [x] `testeador_mcp` executable built on `mcp_dart` (stdio transport), exposing all package features to MCP clients.
+- [x] `WorkspaceConfig` resolves the target project via `TESTEADOR_PROJECT_ROOT` or CWD walk-up (is/depends-on testeador).
+- [x] Introspection tools: `list_suites`, `inspect_suite` (analyzer AST walk, resolves flows in imported `*_flow.dart`), `list_tags`, `dry_run_suite` (reuses public `filterFlows`).
+- [x] Execution tools: `run_suite_cli`, `run_suite_dart_test`, `compile_suite_exe` — all support `execute: false` command-only mode; cURL logs and pass/fail counts parsed from output.
+- [x] Scaffolding tools: `scaffold_actor/fixture/flow/suite_runner/dart_test_main` — all support `dry_run`; refuse to overwrite existing files.
+- [x] Multidev tools (gated by `TESTEADOR_MCP_ENABLE_MULTIDEV=1`): `list_devices`, `boot_fleet`, `shutdown_fleet`, `snapshot_fleet`, `run_patrol_fleet`.
+- [x] Resources (`testeador://templates/*`, `testeador://docs/*`) and prompts (`scaffold_suite`, `diagnose_failure`).
+- [x] Tests under `test/mcp/` (curl parser, process runner, suite inspector golden against pokebattle_rest, template syntax validation). All passing.
+- [x] `.mcp.json` wired with a `testeador` server entry.
+
+### Assertions & dual-mode consistency (v0.3.0)
+- [x] `lib/src/expectations.dart` — zone-independent `expect` + re-exported matchers, surfaced via `package:testeador/expect.dart`. Works in both `run()` (CLI) and `registerWithDartTest()`. Fixes the `OutsideTestException` crash in CLI mode.
+- [x] `registerWithDartTest()` forwards `flow.tags` to `group(tags:)` so `dart test --tags` matches the CLI's `--include-tags`.
+- [x] Example flows migrated off `package:test` assertions onto `package:testeador/expect.dart`.
+
+### Publication readiness (v0.3.0)
+- [x] `CHANGELOG.md`, `repository`/`homepage`/`issue_tracker`/`topics` in pubspec, `.pubignore`. `dart pub publish --dry-run` clean (only the expected git-dirty warning). Still `publish_to: none`.
+
 ### Documentation
-- [x] README.md (usage guide, quick start, CLI reference).
+- [x] README.md (usage guide, quick start, CLI reference, MCP server section).
 - [x] docs/architecture.md (full technical spec with class diagrams).
 - [x] docs/PROBLEM.md (problem narrative in Spanish).
 - [x] roadmap.md (pains 2-7 driving evolution).

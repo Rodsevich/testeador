@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:pokebattle_serverpod_client/pokebattle_serverpod_client.dart';
+import 'package:pokebattle_serverpod_flutter/data/pokemon_sprite_cache.dart';
 import 'package:pokebattle_serverpod_flutter/ui/battle_screen.dart';
 import 'package:pokebattle_serverpod_flutter/ui/create_battle_screen.dart';
+import 'package:pokebattle_serverpod_flutter/ui/widgets/pokemon_sprite.dart';
 
 /// Lobby with live updates: subscribes to `playerAdded` and `battleAdded`
 /// streams so new players and challenges appear with no manual refresh.
@@ -11,6 +13,7 @@ class LobbyScreen extends StatefulWidget {
   /// Creates the [LobbyScreen].
   const LobbyScreen({
     required this.client,
+    required this.spriteCache,
     required this.currentPlayer,
     required this.authUser,
     super.key,
@@ -18,6 +21,9 @@ class LobbyScreen extends StatefulWidget {
 
   /// The Serverpod client.
   final Client client;
+
+  /// Shared cache for Pokémon sprites.
+  final PokemonSpriteCache spriteCache;
 
   /// The player who just registered.
   final Player currentPlayer;
@@ -95,6 +101,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       MaterialPageRoute<void>(
         builder: (_) => CreateBattleScreen(
           client: widget.client,
+          spriteCache: widget.spriteCache,
           currentPlayer: widget.currentPlayer,
           opponent: opponent,
         ),
@@ -107,6 +114,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       MaterialPageRoute<void>(
         builder: (_) => BattleScreen(
           client: widget.client,
+          spriteCache: widget.spriteCache,
           battle: battle,
           currentPlayer: widget.currentPlayer,
         ),
@@ -156,8 +164,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     ),
                     Wrap(
                       spacing: 8,
+                      runSpacing: 8,
                       children: widget.currentPlayer.pokemonNames
-                          .map((name) => Chip(label: Text(name)))
+                          .map(
+                            (name) => Chip(
+                              avatar: PokemonSprite(
+                                name: name,
+                                cache: widget.spriteCache,
+                                size: 24,
+                              ),
+                              label: Text(name),
+                            ),
+                          )
                           .toList(),
                     ),
                     const SizedBox(height: 24),
@@ -170,7 +188,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
                         key: Key('PlayerTile:${p.id}'),
                         leading: const Icon(Icons.person),
                         title: Text(p.name),
-                        subtitle: Text(p.pokemonNames.join(', ')),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: PokemonSpriteRow(
+                            names: p.pokemonNames,
+                            cache: widget.spriteCache,
+                            size: 24,
+                          ),
+                        ),
                         trailing: p.name != widget.currentPlayer.name
                             ? FilledButton.tonal(
                                 key: Key('ButtonChallenge:${p.id}'),
@@ -201,8 +226,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
                           title: Text(
                             '${b.challengerName} vs ${b.opponentName}',
                           ),
-                          subtitle: Text(
-                            'Challenger team: ${b.challengerTeam.join(', ')}',
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: PokemonSpriteRow(
+                              names: b.challengerTeam,
+                              cache: widget.spriteCache,
+                              size: 22,
+                            ),
                           ),
                           trailing:
                               b.opponentName == widget.currentPlayer.name

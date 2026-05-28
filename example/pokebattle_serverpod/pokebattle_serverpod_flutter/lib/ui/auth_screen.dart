@@ -1,15 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:pokebattle_serverpod_client/pokebattle_serverpod_client.dart';
+import 'package:pokebattle_serverpod_flutter/data/pokemon_sprite_cache.dart';
 import 'package:pokebattle_serverpod_flutter/ui/lobby_screen.dart';
 import 'package:pokebattle_serverpod_flutter/ui/registration_screen.dart';
 
 /// Entry screen — register / log in tabs.
 class AuthScreen extends StatefulWidget {
   /// Creates the [AuthScreen].
-  const AuthScreen({required this.client, super.key});
+  const AuthScreen({
+    required this.client,
+    required this.spriteCache,
+    super.key,
+  });
 
   /// The Serverpod client.
   final Client client;
+
+  /// Shared cache for Pokémon sprites used by downstream screens.
+  final PokemonSpriteCache spriteCache;
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -72,10 +80,15 @@ class _AuthScreenState extends State<AuthScreen>
           builder: (_) => existing != null
               ? LobbyScreen(
                   client: widget.client,
+                  spriteCache: widget.spriteCache,
                   currentPlayer: existing,
                   authUser: user,
                 )
-              : RegistrationScreen(client: widget.client, authUser: user),
+              : RegistrationScreen(
+                  client: widget.client,
+                  spriteCache: widget.spriteCache,
+                  authUser: user,
+                ),
         ),
       );
     } catch (e) {
@@ -118,10 +131,15 @@ class _AuthScreenState extends State<AuthScreen>
           builder: (_) => existing != null
               ? LobbyScreen(
                   client: widget.client,
+                  spriteCache: widget.spriteCache,
                   currentPlayer: existing,
                   authUser: user,
                 )
-              : RegistrationScreen(client: widget.client, authUser: user),
+              : RegistrationScreen(
+                  client: widget.client,
+                  spriteCache: widget.spriteCache,
+                  authUser: user,
+                ),
         ),
       );
     } catch (e) {

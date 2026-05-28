@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pokebattle_serverpod_client/pokebattle_serverpod_client.dart';
+import 'package:pokebattle_serverpod_flutter/data/pokemon_sprite_cache.dart';
 import 'package:pokebattle_serverpod_flutter/ui/auth_screen.dart';
 
 /// Root widget of the streaming PokéBattle app.
@@ -8,7 +9,7 @@ import 'package:pokebattle_serverpod_flutter/ui/auth_screen.dart';
 /// `--dart-define=SEED_COLOR=<red|cyan|indigo|...>` so the same APK/IPA can
 /// be reused on multiple devices in the multi-device E2E run with a visually
 /// distinct identity per actor (e.g. Firesh on red, Watersh on cyan).
-class PokeBattleApp extends StatelessWidget {
+class PokeBattleApp extends StatefulWidget {
   /// Creates the [PokeBattleApp].
   const PokeBattleApp({required this.client, super.key});
 
@@ -30,19 +31,28 @@ class PokeBattleApp extends StatelessWidget {
   final Client client;
 
   @override
+  State<PokeBattleApp> createState() => _PokeBattleAppState();
+}
+
+class _PokeBattleAppState extends State<PokeBattleApp> {
+  late final PokemonSpriteCache _spriteCache =
+      PokemonSpriteCache(widget.client);
+
+  @override
   Widget build(BuildContext context) {
     const requested = String.fromEnvironment(
       'SEED_COLOR',
-      defaultValue: _defaultSeed,
+      defaultValue: PokeBattleApp._defaultSeed,
     );
-    final seed = _seedByName[requested.toLowerCase()] ?? Colors.indigo;
+    final seed =
+        PokeBattleApp._seedByName[requested.toLowerCase()] ?? Colors.indigo;
     return MaterialApp(
       title: 'PokéBattle (Serverpod)',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: seed),
         useMaterial3: true,
       ),
-      home: AuthScreen(client: client),
+      home: AuthScreen(client: widget.client, spriteCache: _spriteCache),
     );
   }
 }

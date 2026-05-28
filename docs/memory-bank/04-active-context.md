@@ -2,13 +2,28 @@
 
 **Update this file when:** New work begins, priorities shift, or blockers are resolved.
 
-**Last Updated:** 2026-05-23
+**Last Updated:** 2026-05-26
 
 ---
 
 ## Current Focus
 
-Multi-device streaming example just landed. The repo now has two examples and a public multidev API:
+**Publication prep + two correctness fixes (2026-05-26, uncommitted), bumped to v0.3.0.**
+
+- **CLI-mode assertions fixed.** `package:test`'s `expect` (and even `package:matcher`'s) call `TestHandle.current`, throwing `OutsideTestException` outside a runner — so flows asserted fine under `dart test` but crashed under `Testeador.run()` (the CLI/binary CI mode). testeador now ships its own synchronous `expect` in `lib/src/expectations.dart`, exposed via a dedicated `package:testeador/expect.dart` import (NOT the main barrel — re-exporting matcher's namespace there collides with `package:test` in runner files). Flows import both `testeador.dart` and `expect.dart`; they must NOT import `package:test`. This was caught by running the REST e2e through the MCP.
+- **Tag forwarding fixed.** `registerWithDartTest()` now passes `flow.tags` to `group(..., tags:)` so `dart test --tags` filters like the CLI's `--include-tags`.
+- **Publication metadata.** Added `CHANGELOG.md`, `.pubignore` (excludes `docs/`, `evidence/`, `.env*`, build dirs — also clears the "rename docs/ to doc/" warning), and `repository`/`homepage`/`issue_tracker`/`topics` in pubspec. `dart pub publish --dry-run` is clean except the expected "git dirty" warning. Still `publish_to: none` — flip to publish.
+- **E2E evidence** under `evidence/e2e-rest/` (7/7 flows green in CLI mode, smoke green via `dart test`) and `evidence/mcp-e2e-sim/` (iOS simulator composite captured via the MCP `snapshot_fleet` tool).
+
+**MCP server (`testeador_mcp`) landed earlier this session (2026-05-26, uncommitted).** testeador now ships an MCP server that exposes every feature of the package to MCP clients. Implementation under `lib/src/mcp/`, entrypoint `bin/testeador_mcp.dart`, declared as the `testeador_mcp` executable in `pubspec.yaml`. `mcp_dart`, `analyzer`, `path`, and `meta` were promoted to `dependencies` (not dev) so `dart pub global activate testeador` can build the executable.
+
+- **Tool groups:** introspection (`list_suites`, `inspect_suite`, `list_tags`, `dry_run_suite`), execution (`run_suite_cli`, `run_suite_dart_test`, `compile_suite_exe` — each with `execute: false` command-only mode), scaffolding (`scaffold_actor/fixture/flow/suite_runner/dart_test_main` — each with `dry_run`), multidev (`list_devices`, `boot_fleet`, `shutdown_fleet`, `snapshot_fleet`, `run_patrol_fleet` — gated by `TESTEADOR_MCP_ENABLE_MULTIDEV=1`).
+- **Resources/prompts:** `testeador://templates/*` and `testeador://docs/*` resources; `scaffold_suite` and `diagnose_failure` prompts.
+- **Internal change:** `Testeador._filter` was extracted to the public top-level `filterFlows(flows, options)` (exported from `lib/testeador.dart`) so `dry_run_suite` reuses the exact runtime filter logic.
+- **`.mcp.json`:** a `testeador` server entry was added alongside `dart`/`patrol`/`serverpod`.
+- The suite inspector parses the *unresolved* AST, where `Testeador(...)`/`TestFlowLasting(...)`/`TestStep(...)` (no `new`) are `MethodInvocation`s, not `InstanceCreationExpression`s — `_callInfo` normalizes both.
+
+Earlier context — multi-device streaming example. The repo has two examples and a public multidev API:
 
 - `example/pokebattle_rest/` — the original REST example (renamed from `example/`). HTTP smoke flow unchanged; only the testeador path in its pubspec was bumped to `../../`.
 - `example/pokebattle_serverpod/` — new Serverpod streaming example. Three sub-packages (`_server`, `_client`, `_flutter`). The Flutter app mirrors the REST example screen-by-screen but the lobby auto-updates via `playerAdded` / `battleAdded` streams (the AppBar shows a `● Live` chip to distinguish it).

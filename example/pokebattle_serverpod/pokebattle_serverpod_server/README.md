@@ -1,15 +1,13 @@
 # pokebattle_serverpod_server
 
-This is the starting point for your Serverpod server.
+Serverpod backend for the PokéBattle streaming example.
 
-To run your server, you first need to start Postgres and Redis. It's easiest to do with Docker.
+This server runs in-memory: no Postgres, no Redis. State lives in
+`lib/src/store/in_memory_store.dart` and is reset every time the server
+restarts.
 
-    docker compose up --build --detach
-
-Then you can start the Serverpod server.
+To start it:
 
     dart bin/main.dart
 
-When you are finished, you can shut down Serverpod with `Ctrl-C`, then stop Postgres and Redis.
-
-    docker compose stop
+Stop with `Ctrl-C`.

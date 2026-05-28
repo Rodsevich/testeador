@@ -10,7 +10,7 @@ import 'package:testeador/src/multidev/target_device.dart';
 /// channel a host can use to send "tap here" RPCs. The minimum useful unit is
 /// therefore a whole *agent flow* (a coherent UI scenario in a single Patrol
 /// test file), invoked from the host as one subprocess per device. A
-/// [DeviceFleet] composes these with `Future.wait` so several devices act in
+/// `DeviceFleet` composes these with `Future.wait` so several devices act in
 /// parallel.
 /// {@endtemplate}
 abstract class PatrolRunner {

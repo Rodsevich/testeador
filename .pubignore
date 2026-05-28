@@ -1,0 +1,27 @@
+# Project documentation lives in the GitHub repo, not in the published
+# package. Excluding it also avoids the pub "rename docs/ to doc/" layout
+# warning without renaming the directory (which AGENTS.md/CLAUDE.md reference).
+docs/
+
+# Captured screenshot/evidence artifacts.
+evidence/
+**/evidence/
+
+# Local environment files — never publish secrets.
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Build artifacts and tool caches inside examples.
+**/build/
+**/.dart_tool/
+
+# Editor / agent / planning scaffolding.
+.claude/
+.vscode/
+.windsurfrules
+.cursorrules
+
+# Compiled binaries.
+*.exe

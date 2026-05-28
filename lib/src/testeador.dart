@@ -6,6 +6,28 @@ import 'package:testeador/src/actor.dart';
 import 'package:testeador/src/test_flow.dart';
 import 'package:testeador/src/testeador_options.dart';
 
+/// Filters [flows] by the include/exclude rules in [options].
+///
+/// Exposed as a top-level function so external runners (the MCP server's
+/// `dry_run_suite` tool in particular) can compute exactly the same set of
+/// flows that `Testeador.run` and `Testeador.registerWithDartTest` would
+/// execute, without spawning a process.
+List<TestFlow> filterFlows(List<TestFlow> flows, TesteadorOptions options) {
+  return flows.where((flow) {
+    if (options.includeFlows.isNotEmpty &&
+        !options.includeFlows.contains(flow.name)) {
+      return false;
+    }
+    if (options.excludeFlows.contains(flow.name)) return false;
+    if (options.includeTags.isNotEmpty &&
+        !flow.tags.any(options.includeTags.contains)) {
+      return false;
+    }
+    if (flow.tags.any(options.excludeTags.contains)) return false;
+    return true;
+  }).toList();
+}
+
 /// {@template testeador}
 /// Orchestrates the execution of [TestFlow]s.
 ///
@@ -32,12 +54,14 @@ class Testeador {
 
   /// Registers all flows as `group()`/`test()` blocks with `package:test`.
   ///
-  /// Call this inside `main()` in a file run by `dart test`.
+  /// Call this inside `main()` in a file run by `dart test`. Each flow's
+  /// [TestFlow.tags] are forwarded to its `group()` so that `dart test --tags`
+  /// filters consistently with the CLI's `--include-tags` / `--exclude-tags`.
   void registerWithDartTest([
     TesteadorOptions options = const TesteadorOptions(),
   ]) {
     _injectInterceptors();
-    final filtered = _filter(flows, options);
+    final filtered = filterFlows(flows, options);
     for (final flow in filtered) {
       dart_test.group(flow.name, () {
         dynamic context;
@@ -60,7 +84,7 @@ class Testeador {
             await step.execute();
           });
         }
-      });
+      }, tags: flow.tags.isEmpty ? null : flow.tags.toList());
     }
   }
 
@@ -103,7 +127,7 @@ class Testeador {
     }
 
     final options = _optionsFromArgs(results);
-    final filtered = _filter(flows, options);
+    final filtered = filterFlows(flows, options);
 
     stdout.writeln('testeador — running ${filtered.length} flow(s)');
 
@@ -130,7 +154,7 @@ class Testeador {
         }
 
         stdout.writeln('  ✓ passed');
-      } catch (e, st) {
+      } on Object catch (e, st) {
         failureCount++;
         stderr.writeln('  ✗ FAILED: $e');
 
@@ -168,22 +192,6 @@ class Testeador {
   // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------
-
-  List<TestFlow> _filter(List<TestFlow> all, TesteadorOptions opts) {
-    return all.where((flow) {
-      if (opts.includeFlows.isNotEmpty &&
-          !opts.includeFlows.contains(flow.name)) {
-        return false;
-      }
-      if (opts.excludeFlows.contains(flow.name)) return false;
-      if (opts.includeTags.isNotEmpty &&
-          !flow.tags.any(opts.includeTags.contains)) {
-        return false;
-      }
-      if (flow.tags.any(opts.excludeTags.contains)) return false;
-      return true;
-    }).toList();
-  }
 
   void _injectInterceptors() {
     for (final actor in actors) {

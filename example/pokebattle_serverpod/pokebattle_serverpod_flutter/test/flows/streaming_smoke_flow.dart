@@ -1,4 +1,4 @@
-import 'package:test/test.dart';
+import 'package:testeador/expect.dart';
 import 'package:testeador/testeador.dart';
 
 /// End-to-end smoke flow that proves the Serverpod streaming contract by

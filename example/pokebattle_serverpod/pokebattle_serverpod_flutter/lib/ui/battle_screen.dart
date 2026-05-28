@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:pokebattle_serverpod_client/pokebattle_serverpod_client.dart';
+import 'package:pokebattle_serverpod_flutter/data/pokemon_sprite_cache.dart';
+import 'package:pokebattle_serverpod_flutter/ui/widgets/pokemon_sprite.dart';
 
 /// Screen showing the details of a battle. Subscribes to `battleUpdates`
 /// so any change broadcast from the server (acceptance, mutation) updates
@@ -10,6 +12,7 @@ class BattleScreen extends StatefulWidget {
   /// Creates the [BattleScreen].
   const BattleScreen({
     required this.client,
+    required this.spriteCache,
     required this.battle,
     required this.currentPlayer,
     super.key,
@@ -17,6 +20,9 @@ class BattleScreen extends StatefulWidget {
 
   /// The Serverpod client.
   final Client client;
+
+  /// Shared cache for Pokémon sprites.
+  final PokemonSpriteCache spriteCache;
 
   /// The battle to display.
   final Battle battle;
@@ -91,10 +97,15 @@ class _BattleScreenState extends State<BattleScreen> {
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
+              runSpacing: 8,
               children: _battle.challengerTeam
                   .map(
                     (name) => Chip(
-                      avatar: const Icon(Icons.catching_pokemon, size: 16),
+                      avatar: PokemonSprite(
+                        name: name,
+                        cache: widget.spriteCache,
+                        size: 24,
+                      ),
                       label: Text(name),
                     ),
                   )

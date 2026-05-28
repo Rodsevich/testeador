@@ -4,49 +4,107 @@
     {
       "type": "dart",
       "request": "launch",
-      "name": "PokéBattle App (Chrome)",
+      "name": "PokéBattle REST App (Chrome)",
       "program": "lib/main.dart",
-      "cwd": "${workspaceFolder}/example",
+      "cwd": "${workspaceFolder}/example/pokebattle_rest",
       "args": ["-d", "chrome"]
     },
     {
       "type": "dart",
       "request": "launch",
-      "name": "PokéBattle App (Web Server)",
+      "name": "PokéBattle REST App (Web Server)",
       "program": "lib/main.dart",
-      "cwd": "${workspaceFolder}/example",
+      "cwd": "${workspaceFolder}/example/pokebattle_rest",
       "args": ["-d", "web-server", "--web-port", "8080"]
     },
     {
       "type": "dart",
       "request": "launch",
-      "name": "Run Integration Tests",
+      "name": "REST: Run All Integration Tests",
       "program": "bin/run_tests.dart",
-      "cwd": "${workspaceFolder}/example",
+      "cwd": "${workspaceFolder}/example/pokebattle_rest",
       "args": ["--verbose"]
     },
     {
       "type": "dart",
       "request": "launch",
-      "name": "Run Integration Tests (smoke only)",
+      "name": "REST: Run Integration Tests (smoke only)",
       "program": "bin/run_tests.dart",
-      "cwd": "${workspaceFolder}/example",
+      "cwd": "${workspaceFolder}/example/pokebattle_rest",
       "args": ["--include-tags", "smoke", "--verbose"]
     },
     {
       "type": "dart",
       "request": "launch",
-      "name": "Run Client Integration Tests",
-      "program": "example/test/client_integration_test.dart",
-      "cwd": "${workspaceFolder}/example",
-      "args": ["--verbose"]
+      "name": "REST: API Client Tests",
+      "program": "test/api_client_test.dart",
+      "cwd": "${workspaceFolder}/example/pokebattle_rest"
     },
     {
       "type": "dart",
       "request": "launch",
-      "name": "Run API Client Tests (dart test)",
-      "program": "example/test/api_client_test.dart",
-      "cwd": "${workspaceFolder}/example"
+      "name": "REST: Contract Tests",
+      "program": "test/contract_test.dart",
+      "cwd": "${workspaceFolder}/example/pokebattle_rest"
+    },
+    {
+      "type": "dart",
+      "request": "launch",
+      "name": "Serverpod (server)",
+      "program": "bin/main.dart",
+      "cwd": "${workspaceFolder}/example/pokebattle_serverpod/pokebattle_serverpod_server"
+    },
+    {
+      "type": "dart",
+      "request": "launch",
+      "name": "PokéBattle App (iOS sim)",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}/example/pokebattle_serverpod/pokebattle_serverpod_flutter",
+      "deviceId": "iPhone",
+      "toolArgs": ["--dart-define-from-file=.env.ios"]
+    },
+    {
+      "type": "dart",
+      "request": "launch",
+      "name": "PokéBattle App (Android emu)",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}/example/pokebattle_serverpod/pokebattle_serverpod_flutter",
+      "deviceId": "Pixel_9a",
+      "toolArgs": ["--dart-define-from-file=.env.android"]
+    },
+    {
+      "type": "dart",
+      "request": "launch",
+      "name": "Serverpod: Contract Tests (server-stream flow)",
+      "program": "test/contract_test.dart",
+      "cwd": "${workspaceFolder}/example/pokebattle_serverpod/pokebattle_serverpod_flutter",
+      "args": ["-N", "server-stream"]
+    },
+    {
+      "type": "dart",
+      "request": "launch",
+      "name": "Serverpod: Contract Tests (streaming smoke flow)",
+      "program": "test/contract_test.dart",
+      "cwd": "${workspaceFolder}/example/pokebattle_serverpod/pokebattle_serverpod_flutter",
+      "args": ["-N", "streaming"]
+    },
+    {
+      "type": "dart",
+      "request": "launch",
+      "name": "Serverpod: Endpoint Integration Tests",
+      "program": "test/integration/",
+      "cwd": "${workspaceFolder}/example/pokebattle_serverpod/pokebattle_serverpod_server"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "PokéBattle Full Stack (server + iOS + Android)",
+      "configurations": [
+        "Serverpod (server)",
+        "PokéBattle App (iOS sim)",
+        "PokéBattle App (Android emu)"
+      ],
+      "stopAll": true
     }
   ]
 }

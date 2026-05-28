@@ -1,4 +1,4 @@
-import 'package:test/test.dart';
+import 'package:testeador/expect.dart';
 import 'package:testeador/testeador.dart';
 import 'package:testeador_example/domain/models.dart';
 import 'package:testeador_example/domain/repositories.dart';

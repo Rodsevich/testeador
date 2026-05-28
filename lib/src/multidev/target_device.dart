@@ -6,7 +6,7 @@ import 'dart:io';
 /// Implementations wrap the platform-specific CLI tools (`adb` for Android
 /// emulators, `xcrun simctl` for iOS simulators). Each device knows how to
 /// boot itself, shut down, and produce a screenshot — the three primitives a
-/// [DeviceFleet] needs to coordinate evidence capture across N targets.
+/// `DeviceFleet` needs to coordinate evidence capture across N targets.
 /// {@endtemplate}
 sealed class TargetDevice {
   /// {@macro target_device}

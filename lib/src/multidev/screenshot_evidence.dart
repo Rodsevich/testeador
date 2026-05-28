@@ -25,14 +25,14 @@ class ScreenshotBundle {
   /// ISO-8601 UTC timestamp of the moment captures were dispatched.
   final String timestamp;
 
-  /// One [DeviceShot] per device, in the order of the source [DeviceFleet].
+  /// One `DeviceShot` per device, in the order of the source `DeviceFleet`.
   final List<DeviceShot> shots;
 
   /// Max wall-clock difference, in ms, between the fastest and slowest shot.
   final int skewMs;
 
   /// Composite PNG with all devices laid out side-by-side. `null` if
-  /// [DeviceFleet.snapshot] was called instead of `snapshotComposite`.
+  /// `DeviceFleet.snapshot` was called instead of `snapshotComposite`.
   final File? composite;
 
   /// Returns a copy of this bundle with [composite] populated.

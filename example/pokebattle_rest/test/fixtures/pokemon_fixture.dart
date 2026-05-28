@@ -1,4 +1,4 @@
-seimport 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import 'package:testeador/testeador.dart';
 import 'package:testeador_example/data/api_client.dart';
 import 'package:testeador_example/domain/models.dart';

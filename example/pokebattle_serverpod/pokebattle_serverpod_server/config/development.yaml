@@ -1,0 +1,31 @@
+# Local development configuration for the PokéBattle Serverpod example.
+#
+# This server runs in "mini" style: the endpoints use an in-memory store
+# (see lib/src/store/in_memory_store.dart) and no database or Redis is
+# required. As a result the `database:` and `redis:` sections are omitted,
+# which causes Serverpod to disable both features at startup.
+
+apiServer:
+  port: 8080
+  publicHost: localhost
+  publicPort: 8080
+  publicScheme: http
+
+insightsServer:
+  port: 8081
+  publicHost: localhost
+  publicPort: 8081
+  publicScheme: http
+
+webServer:
+  port: 8082
+  publicHost: localhost
+  publicPort: 8082
+  publicScheme: http
+
+maxRequestSize: 524288
+
+sessionLogs:
+  persistentEnabled: false
+  consoleEnabled: true
+  consoleLogFormat: text

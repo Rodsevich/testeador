@@ -15,6 +15,15 @@
     "serverpod": {
       "command": "serverpod_mcp",
       "args": []
+    },
+    "testeador": {
+      "command": "dart",
+      "args": ["run", "--no-serve-devtools", "testeador:testeador_mcp"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "TESTEADOR_PROJECT_ROOT": "${workspaceFolder}",
+        "TESTEADOR_MCP_ENABLE_MULTIDEV": "1"
+      }
     }
   }
 }

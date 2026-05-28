@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:pokebattle_serverpod_client/pokebattle_serverpod_client.dart';
-import 'package:test/test.dart';
+import 'package:testeador/expect.dart';
 import 'package:testeador/testeador.dart';
 
 /// End-to-end flow that exercises the Serverpod stream contract from the
@@ -12,7 +12,7 @@ import 'package:testeador/testeador.dart';
 ///   1. Boot the Serverpod server:
 ///      `cd ../pokebattle_serverpod_server && dart bin/main.dart &`
 ///   2. Boot device A (Android) and device B (iOS).
-///   3. `flutter run -d <android> --dart-define=SEED_COLOR=red \
+///   3. `flutter run -d ANDROID --dart-define=SEED_COLOR=red \
 ///        --dart-define=AUTO_LOGIN_EMAIL=firesh@auto.dev \
 ///        --dart-define=AUTO_LOGIN_PASSWORD=Auto_Pass1! \
 ///        --dart-define=AUTO_LOGIN_NAME=Firesh \

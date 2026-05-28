@@ -276,6 +276,59 @@ dart compile exe bin/run_tests.dart -o bin/test_runner
 ./bin/test_runner --include-tags smoke --verbose
 ```
 
+## MCP Server
+
+testeador ships an MCP (Model Context Protocol) server, `testeador_mcp`, that
+exposes every feature of the package to any MCP client (Claude Code, Cursor,
+etc.). The server is the `testeador_mcp` executable declared in
+[`pubspec.yaml`](pubspec.yaml); its implementation lives under
+[`lib/src/mcp/`](lib/src/mcp/) and the entrypoint is
+[`bin/testeador_mcp.dart`](bin/testeador_mcp.dart).
+
+```bash
+# Smoke test the server directly
+dart run testeador:testeador_mcp --version
+dart run testeador:testeador_mcp --print-config   # lists discovered suites
+```
+
+It operates on the project named by `TESTEADOR_PROJECT_ROOT` (falling back to
+the nearest ancestor of CWD whose `pubspec.yaml` is or depends on testeador),
+so consumers add it to their own `.mcp.json`:
+
+```jsonc
+{
+  "mcpServers": {
+    "testeador": {
+      "command": "dart",
+      "args": ["run", "--no-serve-devtools", "testeador:testeador_mcp"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "TESTEADOR_PROJECT_ROOT": "${workspaceFolder}",
+        "TESTEADOR_MCP_ENABLE_MULTIDEV": "1"
+      }
+    }
+  }
+}
+```
+
+Tool groups:
+
+- **Introspection** — `list_suites`, `inspect_suite`, `list_tags`,
+  `dry_run_suite` (parse suites via the Dart analyzer; never spawn).
+- **Execution** — `run_suite_cli`, `run_suite_dart_test`, `compile_suite_exe`
+  (each accepts `execute: false` to return the command line only; cURL logs
+  and pass/fail counts are parsed out of the run).
+- **Scaffolding** — `scaffold_actor`, `scaffold_fixture`, `scaffold_flow`,
+  `scaffold_suite_runner`, `scaffold_dart_test_main` (each accepts
+  `dry_run: true` to preview without writing).
+- **Multidev** — `list_devices`, `boot_fleet`, `shutdown_fleet`,
+  `snapshot_fleet`, `run_patrol_fleet` (gated behind
+  `TESTEADOR_MCP_ENABLE_MULTIDEV=1`; require `adb`/`xcrun`).
+
+It also serves the scaffolding templates and project docs as MCP **resources**
+(`testeador://templates/*`, `testeador://docs/*`) and two **prompts**
+(`scaffold_suite`, `diagnose_failure`).
+
 ## Example
 
 The [`example/`](example/) directory hosts the example apps. [`example/pokebattle_rest/`](example/pokebattle_rest/) is the REST-backed PokéBattle scenario with two actors (Firesh and Watersh) and `TestFlowLasting` flows running against real HTTP backends: **PokéAPI** (`https://pokeapi.co/api/v2`) for Pokémon data and **restful-api.dev** (`https://api.restful-api.dev`) for player registration and battles. [`example/pokebattle_serverpod/`](example/pokebattle_serverpod/) is the streaming variant on Serverpod (auto-updates via push, multi-device E2E). See [`example/pokebattle_rest/README.md`](example/pokebattle_rest/README.md) for the REST example details.

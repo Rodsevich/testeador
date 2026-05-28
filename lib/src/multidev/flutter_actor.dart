@@ -6,7 +6,7 @@ import 'package:testeador/src/multidev/target_device.dart';
 /// An [Actor] that is bound to a specific [TargetDevice].
 ///
 /// The host-side [dio] keeps the same role as in the base [Actor] — recording
-/// cURL evidence for HTTP assertions in a [TestStep]. The new [device] field
+/// cURL evidence for HTTP assertions in a `TestStep`. The new [device] field
 /// lets steps route Patrol invocations and screenshots to the right
 /// emulator/simulator without an out-of-band registry.
 /// {@endtemplate}

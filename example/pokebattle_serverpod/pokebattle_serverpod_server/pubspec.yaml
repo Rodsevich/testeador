@@ -19,8 +19,8 @@ dev_dependencies:
 
 serverpod:
   scripts:
-    # Starts the server and applies migrations
-    start: dart bin/main.dart --apply-migrations
+    # Starts the in-memory server (no database, no Redis).
+    start: dart bin/main.dart
 
     # Build the Flutter web app and copy it to the server's web directory.
     # Windows uses xcopy since flutter's --output flag doesn't work there.

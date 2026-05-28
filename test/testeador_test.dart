@@ -37,9 +37,9 @@ class _FailingFixture extends Fixture<int> {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/// Runs [testeador] in standalone mode without actually calling [exit].
+/// Runs `testeador` in standalone mode without actually calling `exit`.
 ///
-/// We override [exitOnFailure] to false so the runner doesn't call exit(1)
+/// We override `exitOnFailure` to false so the runner doesn't call exit(1)
 /// during tests.
 Future<void> _runNoExit(
   Testeador testeador, {
@@ -303,10 +303,7 @@ void main() {
     });
 
     test('clear() empties the log', () {
-      final interceptor = CurlInterceptor();
-      // Manually add an entry to simulate a recorded request.
-      // ignore: invalid_use_of_visible_for_testing_member
-      interceptor.clear(); // Should not throw on empty log.
+      final interceptor = CurlInterceptor()..clear();
       expect(interceptor.log, isEmpty);
     });
 

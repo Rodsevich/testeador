@@ -11,7 +11,7 @@
 //     dart run example/bin/run_tests.dart --include-tags regression
 
 import 'package:dio/dio.dart';
-import 'package:test/test.dart';
+import 'package:testeador/expect.dart';
 import 'package:testeador/testeador.dart';
 import 'package:testeador_example/data/api_client.dart';
 import 'package:testeador_example/domain/models.dart';

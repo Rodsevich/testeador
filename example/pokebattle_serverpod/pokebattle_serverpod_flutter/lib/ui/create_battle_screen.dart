@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:pokebattle_serverpod_client/pokebattle_serverpod_client.dart';
+import 'package:pokebattle_serverpod_flutter/data/pokemon_sprite_cache.dart';
+import 'package:pokebattle_serverpod_flutter/ui/widgets/pokemon_sprite.dart';
 
 /// Screen for creating a battle challenge against [opponent].
 class CreateBattleScreen extends StatefulWidget {
   /// Creates the [CreateBattleScreen].
   const CreateBattleScreen({
     required this.client,
+    required this.spriteCache,
     required this.currentPlayer,
     required this.opponent,
     super.key,
@@ -13,6 +16,9 @@ class CreateBattleScreen extends StatefulWidget {
 
   /// The Serverpod client.
   final Client client;
+
+  /// Shared cache for Pokémon sprites.
+  final PokemonSpriteCache spriteCache;
 
   /// The player issuing the challenge.
   final Player currentPlayer;
@@ -72,6 +78,11 @@ class _CreateBattleScreenState extends State<CreateBattleScreen> {
                   final isSelected = _selected.contains(name);
                   return CheckboxListTile(
                     key: Key('CheckPokemon:$name'),
+                    secondary: PokemonSprite(
+                      name: name,
+                      cache: widget.spriteCache,
+                      size: 40,
+                    ),
                     title: Text(name),
                     value: isSelected,
                     onChanged: (checked) {
