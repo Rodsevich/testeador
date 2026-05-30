@@ -3,6 +3,7 @@ import 'package:testeador/src/mcp/templates/contract_test.dart';
 import 'package:testeador/src/mcp/templates/fixture.dart';
 import 'package:testeador/src/mcp/templates/flow_lasting.dart';
 import 'package:testeador/src/mcp/templates/flow_transient.dart';
+import 'package:testeador/src/mcp/templates/injected_flow.dart';
 import 'package:testeador/src/mcp/templates/multidev_fleet.dart';
 import 'package:testeador/src/mcp/templates/run_tests_cli.dart';
 
@@ -16,6 +17,7 @@ const Map<String, String> templates = {
   'fixture': fixtureTemplate,
   'flow_lasting': flowLastingTemplate,
   'flow_transient': flowTransientTemplate,
+  'injected_flow': injectedFlowTemplate,
   'run_tests_cli': runTestsCliTemplate,
   'contract_test': contractTestTemplate,
   'multidev_fleet': multidevFleetTemplate,

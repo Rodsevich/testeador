@@ -1,0 +1,12 @@
+# Scopes the testeador codegen so it only captures the pure-Dart unit test.
+# `test/integration/greeting_endpoint_test.dart` wraps its `test()` calls in
+# `withServerpod(...)`, which itself calls `package:test`'s `group()`. That
+# would crash at runtime when `TestInjector` builds its registry, so we
+# exclude the integration tree here.
+targets:
+  $default:
+    builders:
+      testeador|capture:
+        generate_for:
+          include:
+            - test/in_memory_store_test.dart

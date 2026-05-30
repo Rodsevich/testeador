@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:mcp_dart/mcp_dart.dart';
+import 'package:testeador/src/mcp/tools/discovery_tools.dart';
 import 'package:testeador/src/mcp/tools/execution_tools.dart';
 import 'package:testeador/src/mcp/tools/introspection_tools.dart';
 import 'package:testeador/src/mcp/tools/multidev_tools.dart';
@@ -31,6 +32,7 @@ void registerTools({
   registerIntrospectionTools(server: server, workspace: workspace);
   registerExecutionTools(server: server, workspace: workspace);
   registerScaffoldTools(server: server, workspace: workspace);
+  registerDiscoveryTools(server: server, workspace: workspace);
   if (enableMultidev) {
     registerMultidevTools(server: server, workspace: workspace);
   }

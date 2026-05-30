@@ -1,0 +1,20 @@
+builders:
+  capture:
+    import: 'package:testeador/src/codegen/builder_factories.dart'
+    builder_factories: ['captureBuilderFactory']
+    build_extensions:
+      'test/{{}}_test.dart':
+        - 'lib/src/_testeador/{{}}_test.testeador.dart'
+        - 'lib/src/_testeador/{{}}_test.testeador.manifest.json'
+    auto_apply: dependents
+    build_to: source
+    runs_before: ['testeador:aggregator']
+
+  aggregator:
+    import: 'package:testeador/src/codegen/builder_factories.dart'
+    builder_factories: ['aggregatorBuilderFactory']
+    build_extensions:
+      $package$:
+        - 'lib/test_injector.g.dart'
+    auto_apply: root_package
+    build_to: source

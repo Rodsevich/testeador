@@ -276,20 +276,25 @@ dart compile exe bin/run_tests.dart -o bin/test_runner
 ./bin/test_runner --include-tags smoke --verbose
 ```
 
-## MCP Server
+## CLI
 
-testeador ships an MCP (Model Context Protocol) server, `testeador_mcp`, that
-exposes every feature of the package to any MCP client (Claude Code, Cursor,
-etc.). The server is the `testeador_mcp` executable declared in
-[`pubspec.yaml`](pubspec.yaml); its implementation lives under
-[`lib/src/mcp/`](lib/src/mcp/) and the entrypoint is
-[`bin/testeador_mcp.dart`](bin/testeador_mcp.dart).
+testeador ships a single executable, `testeador`, with subcommands. Declared
+under `executables:` in [`pubspec.yaml`](pubspec.yaml); entrypoint
+[`bin/testeador.dart`](bin/testeador.dart).
 
 ```bash
-# Smoke test the server directly
-dart run testeador:testeador_mcp --version
-dart run testeador:testeador_mcp --print-config   # lists discovered suites
+dart run testeador --help            # list subcommands
+dart run testeador mcp --version     # MCP server smoke check
+dart run testeador mcp --print-config
+dart run testeador discover          # list captured tests (codegen)
+dart run testeador discover --help   # discover subcommand help
 ```
+
+## MCP Server (`testeador mcp`)
+
+`testeador mcp` is a Model Context Protocol server exposing every feature of
+the package to any MCP client (Claude Code, Cursor, etc.). Implementation
+under [`lib/src/mcp/`](lib/src/mcp/).
 
 It operates on the project named by `TESTEADOR_PROJECT_ROOT` (falling back to
 the nearest ancestor of CWD whose `pubspec.yaml` is or depends on testeador),
@@ -300,7 +305,7 @@ so consumers add it to their own `.mcp.json`:
   "mcpServers": {
     "testeador": {
       "command": "dart",
-      "args": ["run", "--no-serve-devtools", "testeador:testeador_mcp"],
+      "args": ["run", "--no-serve-devtools", "testeador:testeador", "mcp"],
       "cwd": "${workspaceFolder}",
       "env": {
         "TESTEADOR_PROJECT_ROOT": "${workspaceFolder}",

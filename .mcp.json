@@ -18,7 +18,7 @@
     },
     "testeador": {
       "command": "dart",
-      "args": ["run", "--no-serve-devtools", "testeador:testeador_mcp"],
+      "args": ["run", "--no-serve-devtools", "testeador:testeador", "mcp"],
       "cwd": "${workspaceFolder}",
       "env": {
         "TESTEADOR_PROJECT_ROOT": "${workspaceFolder}",

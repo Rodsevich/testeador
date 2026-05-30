@@ -337,8 +337,8 @@ List<String> _extractFlowExpressions(ArgumentList callArgs) {
 
 Expression? _namedArg(ArgumentList args, String name) {
   for (final a in args.arguments) {
-    if (a is NamedExpression && a.name.label.name == name) {
-      return a.expression;
+    if (a is NamedArgument && a.name.lexeme == name) {
+      return a.argumentExpression;
     }
   }
   return null;

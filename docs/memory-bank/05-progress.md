@@ -55,8 +55,9 @@
 - [x] `ScreenshotComposer.sideBySide` produces a single horizontal PNG with per-device header strips (the canonical AI-review artifact).
 - [x] CLI `bin/snapshot_fleet.dart` for ad-hoc evidence capture.
 
-### MCP server (lib/src/mcp/, bin/testeador_mcp.dart)
-- [x] `testeador_mcp` executable built on `mcp_dart` (stdio transport), exposing all package features to MCP clients.
+### MCP server (lib/src/mcp/, bin/testeador.dart `mcp` subcommand)
+
+- [x] `testeador mcp` subcommand built on `mcp_dart` (stdio transport), exposing all package features to MCP clients.
 - [x] `WorkspaceConfig` resolves the target project via `TESTEADOR_PROJECT_ROOT` or CWD walk-up (is/depends-on testeador).
 - [x] Introspection tools: `list_suites`, `inspect_suite` (analyzer AST walk, resolves flows in imported `*_flow.dart`), `list_tags`, `dry_run_suite` (reuses public `filterFlows`).
 - [x] Execution tools: `run_suite_cli`, `run_suite_dart_test`, `compile_suite_exe` — all support `execute: false` command-only mode; cURL logs and pass/fail counts parsed from output.
@@ -80,6 +81,38 @@
 - [x] docs/PROBLEM.md (problem narrative in Spanish).
 - [x] roadmap.md (pains 2-7 driving evolution).
 - [x] example/pokebattle_rest/README.md (REST example overview).
+
+## What Works (v0.3.0 in-flight — uncommitted 2026-05-29)
+
+### `TestInjector` Codegen (pure pipeline)
+
+- [x] **`Registry` + `CapturedTest`** — runtime types in [lib/src/codegen/registry.dart](../../lib/src/codegen/registry.dart).
+- [x] **`captured.dart` shim** — drop-in for `package:test` that captures lifecycle hooks instead of executing.
+- [x] **AST scanner** — extracts `test()` calls with group chain and tags; warns on non-literal names.
+- [x] **Source transformer** — rewrites `package:test` → shim, relative `lib/` imports → `package:<pkg>/...`, renames `main()` to `_testeadorCapture$<hash>`.
+- [x] **Identifier namer** — lowerCamelCase + Latin diacritic folding + 4-step collision resolution.
+- [x] **Aggregator** — emits self-contained `lib/test_injector.g.dart` with one static getter per discovered test plus dynamic `byName` / `byTags` / `byRegExp`.
+- [x] **Builder factories + build.yaml** — `capture` (auto_apply: dependents) + `aggregator` (root_package).
+- [x] **Pipeline tests** — 8/8 green in [test/codegen_pipeline_test.dart](../../test/codegen_pipeline_test.dart).
+
+### E2E
+
+- [x] **`build_runner build` end-to-end** — verified in [example/inject_demo/](../../example/inject_demo/). `dart run build_runner test` → 9/9 green; the flow exercises static getters + `byTags` + `byRegExp` and the closures resolve correctly against their original imports.
+- [x] **End-to-end in `pokebattle_serverpod_server`** — [test/in_memory_store_test.dart](../../example/pokebattle_serverpod/pokebattle_serverpod_server/test/in_memory_store_test.dart) is captured and the 4 `test()`s land as `TestStep`s of a `TestFlowLasting` in [test/injected_flow_test.dart](../../example/pokebattle_serverpod/pokebattle_serverpod_server/test/injected_flow_test.dart). Plain `dart test` → 4/4 (or 8/8 combined with the source file). Required dropping the server from `resolution: workspace`, switching `testeador|capture` to `build_to: source`, and scoping the capture builder to skip the serverpod-test-wrapped integration tree.
+
+### Discover-and-pick (CLI + MCP)
+
+- [x] **CLI `dart run testeador discover`** — subcommand of the unified [bin/testeador.dart](../../bin/testeador.dart) entrypoint, body in [lib/src/discovery/cli.dart](../../lib/src/discovery/cli.dart). Lists captured tests (text/JSON), filters (`--tag`/`--pattern`/`--package-name`), picks (`--pick`), and emits a `TestFlow` entrypoint via the `injected_flow` template (or `--print` to stdout, `--dry-run` to preview). The single `testeador` executable is declared in `executables:` of [pubspec.yaml](../../pubspec.yaml).
+- [x] **MCP tool `discover_tests`** — [lib/src/mcp/tools/discovery_tools.dart](../../lib/src/mcp/tools/discovery_tools.dart). Subprocess-wraps the CLI so the implementation lives in one place. Wired through [lib/src/mcp/tools/tools.dart](../../lib/src/mcp/tools/tools.dart).
+- [x] **Discovery library** — [lib/src/discovery/](../../lib/src/discovery/): `manifest_reader.dart` walks the root package plus every entry of `.dart_tool/package_config.json` for `lib/src/_testeador/*.testeador.manifest.json`; `picker.dart` flattens into `DiscoveredCatalog` with identifiers assigned via the same `IdentifierNamer` the aggregator uses (so picker identifiers match `TestInjector.<id>` exactly); `flow_emitter.dart` renders via the new `injected_flow` template.
+- [x] **Shared `safeWrite`** — [lib/src/mcp/safe_write.dart](../../lib/src/mcp/safe_write.dart). Extracted from the duplicate `_emit` logic in scaffold_tools.dart; CLI + MCP scaffolding tools share the "refuse to overwrite + honor dry-run" contract.
+- [x] **Unit tests** — 16/16 green in [test/discovery/](../../test/discovery/) (catalog flatten/filter/select, manifest_reader package_config traversal, flow_emitter rendering across lasting/transient/empty-tag/override cases).
+- [x] **E2E verified** — `dart run testeador discover` lists 4 captured tests in `pokebattle_serverpod_server`; picking 2 of them and `dart test test/picked_flow_test.dart` → 2/2 green.
+
+### Pending
+
+- [ ] **True cross-package injection** — both samples above capture and inject in the same package. The next milestone is capturing a `test()` from `pokebattle_serverpod_server` and injecting it from a flow declared in `pokebattle_serverpod_client` (or any other dependent package) to validate `auto_apply: dependents` across the graph.
+- [ ] **Flutter-host workaround** — `example/pokebattle_rest/` and `example/pokebattle_serverpod/pokebattle_serverpod_flutter/` cannot run build_runner yet (`flutter_test` pins `meta 1.17.0`, analyzer 10+ requires `meta 1.18.0`). Either wait on the Flutter SDK, document a `dependency_overrides` recipe, or pull the Flutter sub-package out of `resolution: workspace`.
 
 ## What's Unimplemented / TODO
 

@@ -6,6 +6,8 @@ environment:
 
 workspace:
   - pokebattle_serverpod_client
-  - pokebattle_serverpod_server
   - pokebattle_serverpod_flutter
+# pokebattle_serverpod_server resolves outside the workspace because it depends
+# on testeador (analyzer ^13 / meta 1.18.x) while flutter_test in the Flutter
+# subpackage pins meta 1.17.0. See pokebattle_serverpod_server/pubspec.yaml.
 

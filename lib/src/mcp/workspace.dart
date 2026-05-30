@@ -52,7 +52,7 @@ class WorkspaceConfig {
         return WorkspaceConfig._(dir.absolute);
       }
       stderr.writeln(
-        '[testeador_mcp] TESTEADOR_PROJECT_ROOT=$fromEnv does not exist. '
+        '[testeador mcp] TESTEADOR_PROJECT_ROOT=$fromEnv does not exist. '
         'Will keep searching.',
       );
     }
@@ -63,7 +63,7 @@ class WorkspaceConfig {
     }
 
     stderr.writeln(
-      '[testeador_mcp] Could not locate a project that uses testeador. '
+      '[testeador mcp] Could not locate a project that uses testeador. '
       'Set TESTEADOR_PROJECT_ROOT or run from inside such a project. '
       'Falling back to CWD: ${Directory.current.path}',
     );

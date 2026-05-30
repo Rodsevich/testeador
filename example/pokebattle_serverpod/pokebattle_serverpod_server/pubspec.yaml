@@ -6,16 +6,24 @@ description: Starting point for a Serverpod server.
 environment:
   sdk: '^3.8.0'
 
-resolution: workspace
+# NOTE: Intentionally NOT `resolution: workspace`. The Flutter subpackage in
+# this workspace pins `meta 1.17.0` via `flutter_test`, while testeador's
+# codegen requires `analyzer ^13` (which pulls `meta 1.18.x`). Keeping the
+# server out of the workspace lets it resolve independently so
+# `build_runner build` succeeds here.
 
 dependencies:
   http: ^1.2.0
   serverpod: 3.4.4
 
 dev_dependencies:
+  build_runner: ^2.4.0
+  build_test: ^3.5.0
   lints: '>=3.0.0 <7.0.0'
   serverpod_test: 3.4.4
   test: ^1.25.5
+  testeador:
+    path: ../../../
 
 serverpod:
   scripts:

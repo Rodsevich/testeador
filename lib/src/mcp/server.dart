@@ -21,8 +21,8 @@ McpServer buildServer({
       (Platform.environment['TESTEADOR_MCP_ENABLE_MULTIDEV'] == '1');
 
   stderr
-    ..writeln('[testeador_mcp] Project root: ${ws.root.path}')
-    ..writeln('[testeador_mcp] Multidev tools: '
+    ..writeln('[testeador mcp] Project root: ${ws.root.path}')
+    ..writeln('[testeador mcp] Multidev tools: '
         '${multidev ? 'enabled' : 'disabled'}');
 
   final server = McpServer(
@@ -67,14 +67,14 @@ Future<void> runServer({List<String> args = const []}) async {
   }
 
   final server = buildServer();
-  stderr.writeln('[testeador_mcp] Connecting stdio transport...');
+  stderr.writeln('[testeador mcp] Connecting stdio transport...');
   await server.connect(StdioServerTransport());
 }
 
 void _printHelp() {
   stdout.writeln('''
 $_name $_version
-Usage: testeador_mcp [flags]
+Usage: testeador mcp [flags]
 
 Flags:
   --version         Print version and exit.

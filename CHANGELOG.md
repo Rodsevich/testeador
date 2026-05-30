@@ -8,16 +8,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- **MCP server (`testeador_mcp`).** A Model Context Protocol server, declared
-  as a package executable, that exposes every testeador feature to MCP
-  clients (Claude Code, Cursor, etc.). Tool groups: introspection
-  (`list_suites`, `inspect_suite`, `list_tags`, `dry_run_suite`), execution
-  (`run_suite_cli`, `run_suite_dart_test`, `compile_suite_exe`), scaffolding
-  (`scaffold_actor/fixture/flow/suite_runner/dart_test_main`), and multidev
-  (`list_devices`, `boot_fleet`, `shutdown_fleet`, `snapshot_fleet`,
-  `run_patrol_fleet`, gated behind `TESTEADOR_MCP_ENABLE_MULTIDEV=1`). Also
-  ships scaffolding templates and project docs as MCP resources, plus
-  `scaffold_suite` and `diagnose_failure` prompts.
+- **Unified `testeador` CLI with subcommands.** A single package executable
+  (`bin/testeador.dart`) replaces the per-feature binaries. Subcommands:
+  - **`testeador mcp`** — Model Context Protocol server exposing every
+    testeador feature to MCP clients (Claude Code, Cursor, etc.). Tool groups:
+    introspection (`list_suites`, `inspect_suite`, `list_tags`,
+    `dry_run_suite`), execution (`run_suite_cli`, `run_suite_dart_test`,
+    `compile_suite_exe`), scaffolding (`scaffold_actor`/`fixture`/`flow`/
+    `suite_runner`/`dart_test_main`), discovery (`discover_tests`), and
+    multidev (`list_devices`, `boot_fleet`, `shutdown_fleet`, `snapshot_fleet`,
+    `run_patrol_fleet`, gated behind `TESTEADOR_MCP_ENABLE_MULTIDEV=1`). Also
+    ships scaffolding templates and project docs as MCP resources, plus
+    `scaffold_suite` and `diagnose_failure` prompts.
+  - **`testeador discover`** — lists captured tests from build_runner
+    manifests and scaffolds a `TestFlow` from a picked subset (also wrapped
+    by the `discover_tests` MCP tool).
 - **Zone-independent assertions.** testeador now exports its own synchronous
   `expect` plus the `package:matcher` matchers. Use `expect(...)` from
   `package:testeador/testeador.dart` in flows so the *same* flow asserts

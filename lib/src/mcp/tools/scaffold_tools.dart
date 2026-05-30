@@ -1,7 +1,5 @@
-import 'dart:io';
-
 import 'package:mcp_dart/mcp_dart.dart';
-import 'package:path/path.dart' as p;
+import 'package:testeador/src/mcp/safe_write.dart';
 import 'package:testeador/src/mcp/templates/_index.dart';
 import 'package:testeador/src/mcp/tools/tools.dart';
 import 'package:testeador/src/mcp/workspace.dart';
@@ -26,22 +24,18 @@ CallToolResult _emit({
   required String content,
   required bool dryRun,
 }) {
-  final abs = p.isAbsolute(path)
-      ? path
-      : p.normalize(p.join(workspace.root.path, path));
-  if (dryRun) {
-    return okResult({'path': abs, 'content': content, 'written': false});
-  }
-  final file = File(abs);
-  if (file.existsSync()) {
-    return errResult(
-      'Refusing to overwrite existing file: $abs. '
-      'Pass dry_run: true to preview, or choose a different output_path.',
-    );
-  }
-  file.parent.createSync(recursive: true);
-  file.writeAsStringSync(content);
-  return okResult({'path': abs, 'content': content, 'written': true});
+  final result = safeWrite(
+    workspaceRoot: workspace.root,
+    path: path,
+    content: content,
+    dryRun: dryRun,
+  );
+  if (!result.ok) return errResult(result.error!);
+  return okResult({
+    'path': result.absolutePath,
+    'content': result.content,
+    'written': result.written,
+  });
 }
 
 bool _dryRun(Map<String, Object?> args) => args['dry_run'] as bool? ?? false;
