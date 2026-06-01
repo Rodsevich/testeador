@@ -45,3 +45,9 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+
+# Patrol web (Playwright) artifacts — never commit
+test_bundle.dart
+playwright-report/
+test-results/
+integration_test/test_bundle.dart

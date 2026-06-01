@@ -14,10 +14,10 @@
 import 'package:serverpod_test/serverpod_test.dart' as _i1;
 import 'package:serverpod/serverpod.dart' as _i2;
 import 'dart:async' as _i3;
-import 'package:pokebattle_serverpod_server/src/generated/auth_user.dart'
-    as _i4;
+import 'package:pokebattle_serverpod_server/src/generated/player.dart' as _i4;
 import 'package:pokebattle_serverpod_server/src/generated/battle.dart' as _i5;
-import 'package:pokebattle_serverpod_server/src/generated/player.dart' as _i6;
+import 'package:pokebattle_serverpod_server/src/generated/auth_user.dart'
+    as _i6;
 import 'package:pokebattle_serverpod_server/src/generated/pokemon.dart' as _i7;
 import 'package:pokebattle_serverpod_server/src/generated/protocol.dart';
 import 'package:pokebattle_serverpod_server/src/generated/endpoints.dart';
@@ -103,6 +103,8 @@ void withServerpod(
 }
 
 class TestEndpoints {
+  late final _AdminEndpoint admin;
+
   late final _AuthEndpoint auth;
 
   late final _BattlesEndpoint battles;
@@ -119,6 +121,10 @@ class _InternalTestEndpoints extends TestEndpoints
     _i2.SerializationManager serializationManager,
     _i2.EndpointDispatch endpoints,
   ) {
+    admin = _AdminEndpoint(
+      endpoints,
+      serializationManager,
+    );
     auth = _AuthEndpoint(
       endpoints,
       serializationManager,
@@ -138,6 +144,106 @@ class _InternalTestEndpoints extends TestEndpoints
   }
 }
 
+class _AdminEndpoint {
+  _AdminEndpoint(
+    this._endpointDispatch,
+    this._serializationManager,
+  );
+
+  final _i2.EndpointDispatch _endpointDispatch;
+
+  final _i2.SerializationManager _serializationManager;
+
+  _i3.Future<int> reset(_i1.TestSessionBuilder sessionBuilder) async {
+    return _i1.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _i1.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'admin',
+            method: 'reset',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'admin',
+          methodName: 'reset',
+          parameters: _i1.testObjectToJson({}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _i3.Future<int>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _i3.Future<List<_i4.Player>> seedPlayers(
+    _i1.TestSessionBuilder sessionBuilder,
+    int count,
+  ) async {
+    return _i1.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _i1.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'admin',
+            method: 'seedPlayers',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'admin',
+          methodName: 'seedPlayers',
+          parameters: _i1.testObjectToJson({'count': count}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _i3.Future<List<_i4.Player>>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _i3.Future<_i5.Battle> seedBattle(
+    _i1.TestSessionBuilder sessionBuilder,
+  ) async {
+    return _i1.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _i1.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'admin',
+            method: 'seedBattle',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'admin',
+          methodName: 'seedBattle',
+          parameters: _i1.testObjectToJson({}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _i3.Future<_i5.Battle>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+}
+
 class _AuthEndpoint {
   _AuthEndpoint(
     this._endpointDispatch,
@@ -148,7 +254,7 @@ class _AuthEndpoint {
 
   final _i2.SerializationManager _serializationManager;
 
-  _i3.Future<_i4.AuthUser> register(
+  _i3.Future<_i6.AuthUser> register(
     _i1.TestSessionBuilder sessionBuilder,
     String name,
     String email,
@@ -177,7 +283,7 @@ class _AuthEndpoint {
                   _localUniqueSession,
                   _localCallContext.arguments,
                 )
-                as _i3.Future<_i4.AuthUser>);
+                as _i3.Future<_i6.AuthUser>);
         return _localReturnValue;
       } finally {
         await _localUniqueSession.close();
@@ -185,7 +291,7 @@ class _AuthEndpoint {
     });
   }
 
-  _i3.Future<_i4.AuthUser> login(
+  _i3.Future<_i6.AuthUser> login(
     _i1.TestSessionBuilder sessionBuilder,
     String email,
     String password,
@@ -212,7 +318,7 @@ class _AuthEndpoint {
                   _localUniqueSession,
                   _localCallContext.arguments,
                 )
-                as _i3.Future<_i4.AuthUser>);
+                as _i3.Future<_i6.AuthUser>);
         return _localReturnValue;
       } finally {
         await _localUniqueSession.close();
@@ -401,7 +507,7 @@ class _PlayersEndpoint {
 
   final _i2.SerializationManager _serializationManager;
 
-  _i3.Future<_i6.Player> registerPlayer(
+  _i3.Future<_i4.Player> registerPlayer(
     _i1.TestSessionBuilder sessionBuilder,
     String name,
     List<String> pokemonNames,
@@ -428,7 +534,7 @@ class _PlayersEndpoint {
                   _localUniqueSession,
                   _localCallContext.arguments,
                 )
-                as _i3.Future<_i6.Player>);
+                as _i3.Future<_i4.Player>);
         return _localReturnValue;
       } finally {
         await _localUniqueSession.close();
@@ -436,7 +542,7 @@ class _PlayersEndpoint {
     });
   }
 
-  _i3.Future<List<_i6.Player>> listPlayers(
+  _i3.Future<List<_i4.Player>> listPlayers(
     _i1.TestSessionBuilder sessionBuilder,
   ) async {
     return _i1.callAwaitableFunctionAndHandleExceptions(() async {
@@ -458,7 +564,7 @@ class _PlayersEndpoint {
                   _localUniqueSession,
                   _localCallContext.arguments,
                 )
-                as _i3.Future<List<_i6.Player>>);
+                as _i3.Future<List<_i4.Player>>);
         return _localReturnValue;
       } finally {
         await _localUniqueSession.close();
@@ -466,8 +572,8 @@ class _PlayersEndpoint {
     });
   }
 
-  _i3.Stream<_i6.Player> playerAdded(_i1.TestSessionBuilder sessionBuilder) {
-    var _localTestStreamManager = _i1.TestStreamManager<_i6.Player>();
+  _i3.Stream<_i4.Player> playerAdded(_i1.TestSessionBuilder sessionBuilder) {
+    var _localTestStreamManager = _i1.TestStreamManager<_i4.Player>();
     _i1.callStreamFunctionAndHandleExceptions(
       () async {
         var _localUniqueSession =

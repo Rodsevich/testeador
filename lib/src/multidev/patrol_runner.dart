@@ -14,7 +14,9 @@ import 'package:testeador/src/multidev/target_device.dart';
 /// parallel.
 /// {@endtemplate}
 abstract class PatrolRunner {
-  /// Spawns `patrol test --target <target> --device <device.id>`.
+  /// Spawns `patrol test --target <target> --device <device.patrolDeviceId>`,
+  /// appending any device-specific [TargetDevice.patrolExtraArgs] (e.g. the
+  /// `--web-*` flags for a [WebDevice]).
   ///
   /// [env] is merged with the host environment. A `DEVICE_ID` variable is
   /// always set so the agent flow can branch on which device it is running on.
@@ -27,7 +29,7 @@ abstract class PatrolRunner {
   }) async {
     final result = await Process.run(
       patrolPath,
-      ['test', '--target', target, '--device', device.id],
+      patrolCommandFor(device, target),
       environment: {'DEVICE_ID': device.id, ...env},
       workingDirectory: workingDirectory,
     );
@@ -39,6 +41,29 @@ abstract class PatrolRunner {
     );
   }
 }
+
+/// Builds the argument list for `patrol test` targeting [device].
+///
+/// Single source of truth shared by [PatrolRunner.runOn] (which spawns it) and
+/// the MCP `run_patrol_fleet` tool (which can preview it with `execute: false`)
+/// so the planned command always matches the executed one — including the
+/// `--web-*` flags a [WebDevice] contributes via
+/// [TargetDevice.patrolExtraArgs].
+///
+/// ```text
+/// android  → test --target <t> --device emulator-5554
+/// ios      → test --target <t> --device <udid>
+/// web      → test --target <t> --device chrome --web-headless true \
+///                 --web-viewport 1280x900
+/// ```
+List<String> patrolCommandFor(TargetDevice device, String target) => [
+      'test',
+      '--target',
+      target,
+      '--device',
+      device.patrolDeviceId,
+      ...device.patrolExtraArgs(),
+    ];
 
 /// {@template patrol_result}
 /// Outcome of one `patrol test` subprocess for one device.

@@ -328,7 +328,14 @@ Tool groups:
   `dry_run: true` to preview without writing).
 - **Multidev** — `list_devices`, `boot_fleet`, `shutdown_fleet`,
   `snapshot_fleet`, `run_patrol_fleet` (gated behind
-  `TESTEADOR_MCP_ENABLE_MULTIDEV=1`; require `adb`/`xcrun`).
+  `TESTEADOR_MCP_ENABLE_MULTIDEV=1`; require `adb`/`xcrun` for mobile).
+  Devices are `{platform: android|ios|web, id, …}`. A **web** device drives a
+  Flutter web app in real Chrome via Patrol 4.0+ (Playwright):
+  `run_patrol_fleet` runs `patrol test --device chrome --web-headless <bool>
+  --web-viewport '{"width":W,"height":H}'`. Web e2e needs Node + `patrol_cli`
+  4.x (`dart pub global activate patrol_cli`); the first run auto-installs
+  Playwright. The same `WebDevice` also serves as a headless-Chrome **evidence
+  surface** for `snapshot_fleet` (pass `url`/`route`).
 
 It also serves the scaffolding templates and project docs as MCP **resources**
 (`testeador://templates/*`, `testeador://docs/*`) and two **prompts**
@@ -336,7 +343,7 @@ It also serves the scaffolding templates and project docs as MCP **resources**
 
 ## Example
 
-The [`example/`](example/) directory hosts the example apps. [`example/pokebattle_rest/`](example/pokebattle_rest/) is the REST-backed PokéBattle scenario with two actors (Firesh and Watersh) and `TestFlowLasting` flows running against real HTTP backends: **PokéAPI** (`https://pokeapi.co/api/v2`) for Pokémon data and **restful-api.dev** (`https://api.restful-api.dev`) for player registration and battles. [`example/pokebattle_serverpod/`](example/pokebattle_serverpod/) is the streaming variant on Serverpod (auto-updates via push, multi-device E2E). See [`example/pokebattle_rest/README.md`](example/pokebattle_rest/README.md) for the REST example details.
+The [`example/`](example/) directory hosts the example apps. [`example/pokebattle_rest/`](example/pokebattle_rest/) is the REST-backed PokéBattle scenario with two actors (Firesh and Watersh) and `TestFlowLasting` flows running against real HTTP backends: **PokéAPI** (`https://pokeapi.co/api/v2`) for Pokémon data and **restful-api.dev** (`https://api.restful-api.dev`) for player registration and battles. [`example/pokebattle_serverpod/`](example/pokebattle_serverpod/) is the streaming variant on Serverpod (auto-updates via push, multi-device E2E). It also ships a **web admin panel** (`pokebattle_serverpod_flutter/lib/main_admin.dart`: players, battles, force-data, live stream monitor) driven end-to-end in real Chrome by Patrol-web (`integration_test/admin_overview_test.dart`). See [`example/pokebattle_rest/README.md`](example/pokebattle_rest/README.md) for the REST example details.
 
 ```bash
 dart run example/pokebattle_rest/bin/run_tests.dart

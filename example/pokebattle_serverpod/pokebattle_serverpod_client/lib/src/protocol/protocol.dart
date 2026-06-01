@@ -15,8 +15,8 @@ import 'auth_user.dart' as _i2;
 import 'battle.dart' as _i3;
 import 'player.dart' as _i4;
 import 'pokemon.dart' as _i5;
-import 'package:pokebattle_serverpod_client/src/protocol/battle.dart' as _i6;
-import 'package:pokebattle_serverpod_client/src/protocol/player.dart' as _i7;
+import 'package:pokebattle_serverpod_client/src/protocol/player.dart' as _i6;
+import 'package:pokebattle_serverpod_client/src/protocol/battle.dart' as _i7;
 export 'auth_user.dart';
 export 'battle.dart';
 export 'player.dart';
@@ -84,15 +84,15 @@ class Protocol extends _i1.SerializationManager {
     if (t == List<String>) {
       return (data as List).map((e) => deserialize<String>(e)).toList() as T;
     }
+    if (t == List<_i6.Player>) {
+      return (data as List).map((e) => deserialize<_i6.Player>(e)).toList()
+          as T;
+    }
     if (t == List<String>) {
       return (data as List).map((e) => deserialize<String>(e)).toList() as T;
     }
-    if (t == List<_i6.Battle>) {
-      return (data as List).map((e) => deserialize<_i6.Battle>(e)).toList()
-          as T;
-    }
-    if (t == List<_i7.Player>) {
-      return (data as List).map((e) => deserialize<_i7.Player>(e)).toList()
+    if (t == List<_i7.Battle>) {
+      return (data as List).map((e) => deserialize<_i7.Battle>(e)).toList()
           as T;
     }
     return super.deserialize<T>(data, t);

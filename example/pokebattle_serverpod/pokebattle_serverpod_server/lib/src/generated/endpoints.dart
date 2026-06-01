@@ -11,40 +11,91 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod/serverpod.dart' as _i1;
-import '../endpoints/auth_endpoint.dart' as _i2;
-import '../endpoints/battles_endpoint.dart' as _i3;
-import '../endpoints/players_endpoint.dart' as _i4;
-import '../endpoints/pokemon_endpoint.dart' as _i5;
+import '../endpoints/admin_endpoint.dart' as _i2;
+import '../endpoints/auth_endpoint.dart' as _i3;
+import '../endpoints/battles_endpoint.dart' as _i4;
+import '../endpoints/players_endpoint.dart' as _i5;
+import '../endpoints/pokemon_endpoint.dart' as _i6;
 
 class Endpoints extends _i1.EndpointDispatch {
   @override
   void initializeEndpoints(_i1.Server server) {
     var endpoints = <String, _i1.Endpoint>{
-      'auth': _i2.AuthEndpoint()
+      'admin': _i2.AdminEndpoint()
+        ..initialize(
+          server,
+          'admin',
+          null,
+        ),
+      'auth': _i3.AuthEndpoint()
         ..initialize(
           server,
           'auth',
           null,
         ),
-      'battles': _i3.BattlesEndpoint()
+      'battles': _i4.BattlesEndpoint()
         ..initialize(
           server,
           'battles',
           null,
         ),
-      'players': _i4.PlayersEndpoint()
+      'players': _i5.PlayersEndpoint()
         ..initialize(
           server,
           'players',
           null,
         ),
-      'pokemon': _i5.PokemonEndpoint()
+      'pokemon': _i6.PokemonEndpoint()
         ..initialize(
           server,
           'pokemon',
           null,
         ),
     };
+    connectors['admin'] = _i1.EndpointConnector(
+      name: 'admin',
+      endpoint: endpoints['admin']!,
+      methodConnectors: {
+        'reset': _i1.MethodConnector(
+          name: 'reset',
+          params: {},
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['admin'] as _i2.AdminEndpoint).reset(session),
+        ),
+        'seedPlayers': _i1.MethodConnector(
+          name: 'seedPlayers',
+          params: {
+            'count': _i1.ParameterDescription(
+              name: 'count',
+              type: _i1.getType<int>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['admin'] as _i2.AdminEndpoint).seedPlayers(
+                session,
+                params['count'],
+              ),
+        ),
+        'seedBattle': _i1.MethodConnector(
+          name: 'seedBattle',
+          params: {},
+          call:
+              (
+                _i1.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['admin'] as _i2.AdminEndpoint).seedBattle(session),
+        ),
+      },
+    );
     connectors['auth'] = _i1.EndpointConnector(
       name: 'auth',
       endpoint: endpoints['auth']!,
@@ -72,7 +123,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['auth'] as _i2.AuthEndpoint).register(
+              ) async => (endpoints['auth'] as _i3.AuthEndpoint).register(
                 session,
                 params['name'],
                 params['email'],
@@ -97,7 +148,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['auth'] as _i2.AuthEndpoint).login(
+              ) async => (endpoints['auth'] as _i3.AuthEndpoint).login(
                 session,
                 params['email'],
                 params['password'],
@@ -133,7 +184,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['battles'] as _i3.BattlesEndpoint).createBattle(
+                  (endpoints['battles'] as _i4.BattlesEndpoint).createBattle(
                     session,
                     params['challengerName'],
                     params['opponentName'],
@@ -154,7 +205,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['battles'] as _i3.BattlesEndpoint).getBattle(
+                  (endpoints['battles'] as _i4.BattlesEndpoint).getBattle(
                     session,
                     params['id'],
                   ),
@@ -166,7 +217,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['battles'] as _i3.BattlesEndpoint)
+              ) async => (endpoints['battles'] as _i4.BattlesEndpoint)
                   .listBattles(session),
         ),
         'battleAdded': _i1.MethodStreamConnector(
@@ -179,7 +230,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
                 Map<String, Stream> streamParams,
-              ) => (endpoints['battles'] as _i3.BattlesEndpoint).battleAdded(
+              ) => (endpoints['battles'] as _i4.BattlesEndpoint).battleAdded(
                 session,
               ),
         ),
@@ -199,7 +250,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
                 Map<String, Stream> streamParams,
-              ) => (endpoints['battles'] as _i3.BattlesEndpoint).battleUpdates(
+              ) => (endpoints['battles'] as _i4.BattlesEndpoint).battleUpdates(
                 session,
                 params['id'],
               ),
@@ -229,7 +280,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['players'] as _i4.PlayersEndpoint).registerPlayer(
+                  (endpoints['players'] as _i5.PlayersEndpoint).registerPlayer(
                     session,
                     params['name'],
                     params['pokemonNames'],
@@ -242,7 +293,7 @@ class Endpoints extends _i1.EndpointDispatch {
               (
                 _i1.Session session,
                 Map<String, dynamic> params,
-              ) async => (endpoints['players'] as _i4.PlayersEndpoint)
+              ) async => (endpoints['players'] as _i5.PlayersEndpoint)
                   .listPlayers(session),
         ),
         'playerAdded': _i1.MethodStreamConnector(
@@ -255,7 +306,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
                 Map<String, Stream> streamParams,
-              ) => (endpoints['players'] as _i4.PlayersEndpoint).playerAdded(
+              ) => (endpoints['players'] as _i5.PlayersEndpoint).playerAdded(
                 session,
               ),
         ),
@@ -279,7 +330,7 @@ class Endpoints extends _i1.EndpointDispatch {
                 _i1.Session session,
                 Map<String, dynamic> params,
               ) async =>
-                  (endpoints['pokemon'] as _i5.PokemonEndpoint).getPokemon(
+                  (endpoints['pokemon'] as _i6.PokemonEndpoint).getPokemon(
                     session,
                     params['name'],
                   ),

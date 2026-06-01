@@ -39,9 +39,18 @@ dev_dependencies:
     sdk: flutter
   integration_test:
     sdk: flutter
-  patrol: ^3.13.0
-  testeador:
-    path: ../../../
+  # Patrol 4.0+ drives Flutter web via Playwright (`patrol test --device
+  # chrome`). The host-side multidevice orchestration that USES `testeador`
+  # lives in the server package (it resolves outside this Flutter workspace,
+  # avoiding the testeador↔flutter_test `meta` version conflict).
+  patrol: ^4.0.0
+
+# Patrol CLI config. `test_directory` overrides Patrol 4.x's default
+# (`patrol_test`) so the existing `integration_test/` tree is used as-is —
+# both the mobile agent flows and the web admin e2e live there.
+patrol:
+  app_name: PokéBattle Admin
+  test_directory: integration_test
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

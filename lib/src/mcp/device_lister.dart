@@ -72,10 +72,40 @@ class IosSimulatorInfo {
       };
 }
 
+/// The Chrome/web target, when a runnable Chrome binary is found.
+///
+/// Unlike Android/iOS there is no enumeration: web is a single logical target
+/// (`patrol test --device chrome`). This just reports whether Chrome is
+/// reachable so a caller knows web e2e is possible.
+class WebTargetInfo {
+  /// Creates a [WebTargetInfo].
+  const WebTargetInfo({required this.chromePath, required this.version});
+
+  /// Resolved Chrome/Chromium binary path.
+  final String chromePath;
+
+  /// `chrome --version` output (trimmed).
+  final String version;
+
+  /// Patrol device selector for the web target (always `chrome`).
+  String get device => 'chrome';
+
+  /// JSON-friendly shape.
+  Map<String, dynamic> toJson() => {
+        'device': device,
+        'chrome_path': chromePath,
+        'version': version,
+      };
+}
+
 /// Combined snapshot of locally available devices.
 class DeviceListing {
   /// Creates a [DeviceListing].
-  const DeviceListing({required this.android, required this.ios});
+  const DeviceListing({
+    required this.android,
+    required this.ios,
+    this.web,
+  });
 
   /// Android devices/emulators.
   final List<AndroidDeviceInfo> android;
@@ -83,14 +113,18 @@ class DeviceListing {
   /// iOS simulators.
   final List<IosSimulatorInfo> ios;
 
+  /// The web target, or `null` when no runnable Chrome was found.
+  final WebTargetInfo? web;
+
   /// JSON-friendly shape.
   Map<String, dynamic> toJson() => {
         'android': android.map((a) => a.toJson()).toList(),
         'ios': ios.map((i) => i.toJson()).toList(),
+        if (web != null) 'web': web!.toJson(),
       };
 }
 
-/// Reads local devices. [platform] one of `android`, `ios`, `all`.
+/// Reads local devices. [platform] one of `android`, `ios`, `web`, `all`.
 Future<DeviceListing> listLocalDevices({String platform = 'all'}) async {
   final android = (platform == 'all' || platform == 'android')
       ? await _adbDevices()
@@ -98,7 +132,28 @@ Future<DeviceListing> listLocalDevices({String platform = 'all'}) async {
   final ios = (platform == 'all' || platform == 'ios')
       ? await _simctlDevices()
       : <IosSimulatorInfo>[];
-  return DeviceListing(android: android, ios: ios);
+  final web = (platform == 'all' || platform == 'web')
+      ? await _webTarget()
+      : null;
+  return DeviceListing(android: android, ios: ios, web: web);
+}
+
+/// Probes the resolved Chrome binary via `--version`. Returns `null` when it
+/// is absent or not runnable, mirroring `WebDevice`'s `_resolveChrome`.
+Future<WebTargetInfo?> _webTarget() async {
+  final chromePath = Platform.isMacOS
+      ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+      : 'google-chrome';
+  try {
+    final r = await Process.run(chromePath, ['--version']);
+    if (r.exitCode != 0) return null;
+    return WebTargetInfo(
+      chromePath: chromePath,
+      version: (r.stdout as String).trim(),
+    );
+  } on Object {
+    return null;
+  }
 }
 
 Future<List<AndroidDeviceInfo>> _adbDevices() async {

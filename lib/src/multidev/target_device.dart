@@ -1,12 +1,16 @@
+import 'dart:async';
 import 'dart:io';
+
+import 'package:testeador/src/multidev/web_capture.dart';
 
 /// {@template target_device}
 /// A device or simulator that hosts the app under test.
 ///
 /// Implementations wrap the platform-specific CLI tools (`adb` for Android
-/// emulators, `xcrun simctl` for iOS simulators). Each device knows how to
-/// boot itself, shut down, and produce a screenshot — the three primitives a
-/// `DeviceFleet` needs to coordinate evidence capture across N targets.
+/// emulators, `xcrun simctl` for iOS simulators, headless Chrome for the web).
+/// Each device knows how to boot itself, shut down, and produce a screenshot —
+/// the three primitives a `DeviceFleet` needs to coordinate evidence capture
+/// across N targets.
 /// {@endtemplate}
 sealed class TargetDevice {
   /// {@macro target_device}
@@ -14,11 +18,25 @@ sealed class TargetDevice {
 
   /// Identifier used by host tools to address this device.
   ///
-  /// Android: `emulator-5554`. iOS: the simulator UDID.
+  /// Android: `emulator-5554`. iOS: the simulator UDID. Web: an evidence
+  /// label (composite columns / filenames).
   String get id;
 
-  /// `'android'` or `'ios'`.
+  /// `'android'`, `'ios'`, or `'web'`.
   String get platform;
+
+  /// Selector passed to `patrol test --device <…>`.
+  ///
+  /// Defaults to [id] — correct for Android serials and iOS UDIDs. Web
+  /// overrides this to `'chrome'` (Patrol's web target), since [id] is only an
+  /// evidence label.
+  String get patrolDeviceId => id;
+
+  /// Extra flags appended to the `patrol test` command for this device.
+  ///
+  /// Empty for Android/iOS. Web returns its `--web-*` flags (headless,
+  /// viewport) so a host-side runner reproduces the exact driven command.
+  List<String> patrolExtraArgs() => const [];
 
   /// Powers the device on. Idempotent: a no-op when already booted.
   Future<void> boot();
@@ -192,6 +210,153 @@ final class IosSimulator extends TargetDevice {
       );
     }
     return out;
+  }
+}
+
+/// {@template web_device}
+/// A web app running in Chrome. Serves two roles:
+///
+///  1. **Driven e2e target.** [patrolDeviceId] is `'chrome'` and
+///     [patrolExtraArgs] carries the `--web-*` flags, so a `DeviceFleet` can
+///     run `patrol test --device chrome …` against it (Patrol 4.0+ drives
+///     Flutter web via Playwright). This is the path used for e2e testing.
+///  2. **Evidence surface.** [screenshot] drives headless Chrome over CDP:
+///     navigate to [currentUrl], **poll [readyExpression] until the app is past
+///     its splash** (default: Flutter's view attached), let it [settle], then
+///     capture. Optional [cookies] / [initScript] seed an auth session or base
+///     URL so a guarded route shows real content, not a login wall.
+///
+/// [route] is mutable so a flow can re-point the same device at the screen
+/// relevant to the current step (`/`, `/players`, `/battles`, …) before each
+/// snapshot.
+/// {@endtemplate}
+final class WebDevice extends TargetDevice {
+  /// {@macro web_device}
+  WebDevice({
+    required this.baseUrl,
+    this.id = 'chrome',
+    this.route = '/',
+    String? chromePath,
+    this.width = 1280,
+    this.height = 900,
+    this.webHeadless = true,
+    this.virtualTimeBudget = const Duration(seconds: 12),
+    this.readyExpression = "document.querySelector('flutter-view') != null",
+    this.readyTimeout = const Duration(seconds: 30),
+    this.settle = const Duration(milliseconds: 1500),
+    this.cookies = const {},
+    this.initScript,
+  }) : chromePath = chromePath ?? _resolveChrome();
+
+  /// Origin the app is served from (e.g. `http://localhost:5000`).
+  final String baseUrl;
+
+  @override
+  final String id;
+
+  /// Route appended to [baseUrl] for the next [screenshot]. Mutable on purpose:
+  /// a flow sets it to the screen that matches the current step.
+  String route;
+
+  /// Chrome/Chromium binary. Resolved per-platform when not supplied.
+  final String chromePath;
+
+  /// Viewport width passed to `--window-size`.
+  final int width;
+
+  /// Viewport height passed to `--window-size`.
+  final int height;
+
+  /// Whether `patrol test` runs Chromium headless (`--web-headless`).
+  ///
+  /// `true` for CI. Set `false` to watch the browser drive locally.
+  final bool webHeadless;
+
+  /// Legacy knob from the one-shot `--screenshot` path. The CDP capture in
+  /// [screenshot] uses [readyTimeout] + [settle] instead; kept for source
+  /// compatibility.
+  final Duration virtualTimeBudget;
+
+  /// JavaScript boolean expression polled until truthy before [screenshot]
+  /// captures. The default fires once Flutter has attached its view (i.e. the
+  /// first frame rendered and the HTML splash was removed). Override with a
+  /// content-aware check (e.g. `document.body.innerText.includes('Welcome')`)
+  /// to wait for data, not just the first paint.
+  final String readyExpression;
+
+  /// Max time to wait for [readyExpression]; capture proceeds anyway after it.
+  final Duration readyTimeout;
+
+  /// Extra pause after readiness so async content finishes painting.
+  final Duration settle;
+
+  /// Cookies injected (via CDP) before navigation — e.g. an auth session so a
+  /// guarded route renders its real content instead of a login wall.
+  final Map<String, String> cookies;
+
+  /// JS evaluated on every new document before app scripts run — e.g. to seed
+  /// `localStorage`/`SharedPreferences` (base URL, feature flags) at startup.
+  final String? initScript;
+
+  @override
+  String get platform => 'web';
+
+  @override
+  String get patrolDeviceId => 'chrome';
+
+  @override
+  List<String> patrolExtraArgs() => [
+        '--web-headless',
+        '$webHeadless',
+        // patrol_cli expects a JSON object here, not `WxH`.
+        '--web-viewport',
+        '{"width": $width, "height": $height}',
+      ];
+
+  /// Full URL captured by the next [screenshot] (`baseUrl` + `route`).
+  String get currentUrl {
+    final b = baseUrl.endsWith('/')
+        ? baseUrl.substring(0, baseUrl.length - 1)
+        : baseUrl;
+    final r = route.startsWith('/') ? route : '/$route';
+    return '$b$r';
+  }
+
+  @override
+  Future<void> boot() async {
+    final r = await Process.run(chromePath, ['--version']);
+    if (r.exitCode != 0) {
+      throw StateError(
+        'WebDevice($id): chrome binary not runnable at "$chromePath".',
+      );
+    }
+  }
+
+  @override
+  Future<void> shutdown() async {}
+
+  @override
+  Future<File> screenshot(File out) async {
+    await captureWebPage(
+      chromePath: chromePath,
+      url: currentUrl,
+      out: out,
+      width: width,
+      height: height,
+      readyExpression: readyExpression,
+      readyTimeout: readyTimeout,
+      settle: settle,
+      cookies: cookies,
+      initScript: initScript,
+    );
+    return out;
+  }
+
+  static String _resolveChrome() {
+    if (Platform.isMacOS) {
+      return '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+    }
+    return 'google-chrome';
   }
 }
 

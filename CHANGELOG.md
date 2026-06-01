@@ -4,6 +4,42 @@ All notable changes to this project are documented here. The format is based
 on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- **`WebDevice` — a driven web target for the multi-device fleet.** A
+  `TargetDevice` subtype for Flutter web apps that serves two roles:
+  - **Driven e2e (Patrol-web).** `TargetDevice` gained `patrolDeviceId`
+    (web → `chrome`) and `patrolExtraArgs()` (web → `--web-headless <bool>
+    --web-viewport '{"width":W,"height":H}'`), so a fleet runs
+    `patrol test --device chrome …` against it (Patrol 4.0+ drives Flutter web
+    via Playwright). The new pure `patrolCommandFor(device, target)` is the
+    single source of truth shared by `PatrolRunner.runOn` and the MCP
+    `run_patrol_fleet` planned-command preview.
+  - **Evidence surface.** `screenshot()` drives headless Chrome over the
+    DevTools Protocol (`lib/src/multidev/web_capture.dart`, pure Dart — no
+    Node): navigate to `currentUrl` (`baseUrl` + a mutable `route`), **poll
+    `readyExpression` until the SPA is past its splash** (default: Flutter's
+    `flutter-view` attached), `settle`, then capture. The previous one-shot
+    `chrome --headless --screenshot` photographed the app mid-bootstrap (stuck
+    on its splash); CDP keeps a real event loop so the rendered UI is captured.
+    Optional `cookies` (injected via `Network.setCookie`) and `initScript`
+    (`Page.addScriptToEvaluateOnNewDocument`) seed an auth session / base URL so
+    a guarded route shows real content instead of a login wall. The Chrome
+    process is always killed and its temp profile removed, even on failure.
+    This lets a fleet put a logged-in web admin panel side-by-side with mobile
+    sims in `snapshotComposite`.
+
+  The MCP multidev tools accept `platform: "web"` with `url`, `route`,
+  `web_headless`, and `viewport` fields; `list_devices` reports a `web` target
+  via a Chrome probe. Web e2e needs Node + `patrol_cli` 4.x.
+- **Web admin panel example.** `pokebattle_serverpod` ships a web admin panel
+  (`pokebattle_serverpod_flutter/lib/main_admin.dart`) — players, battles,
+  force-data (`client.admin.reset/seedPlayers/seedBattle`), and a live stream
+  monitor — driven end-to-end in real Chrome by
+  `integration_test/admin_overview_test.dart`.
+
 ## 0.3.0
 
 ### Added

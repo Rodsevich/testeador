@@ -12,11 +12,51 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:serverpod_client/serverpod_client.dart' as _i1;
 import 'dart:async' as _i2;
-import 'package:pokebattle_serverpod_client/src/protocol/auth_user.dart' as _i3;
+import 'package:pokebattle_serverpod_client/src/protocol/player.dart' as _i3;
 import 'package:pokebattle_serverpod_client/src/protocol/battle.dart' as _i4;
-import 'package:pokebattle_serverpod_client/src/protocol/player.dart' as _i5;
+import 'package:pokebattle_serverpod_client/src/protocol/auth_user.dart' as _i5;
 import 'package:pokebattle_serverpod_client/src/protocol/pokemon.dart' as _i6;
 import 'protocol.dart' as _i7;
+
+/// Admin endpoint exposed to clients as `client.admin`.
+///
+/// Powers the "force data" controls of the web admin panel: it can wipe the
+/// in-memory store and seed demo players/battles. Every seed broadcasts on the
+/// same MessageCentral channels the player/battle streams listen on, so the
+/// live monitor reflects seeded entities in real time — exactly like organic
+/// traffic from the player app.
+/// {@category Endpoint}
+class EndpointAdmin extends _i1.EndpointRef {
+  EndpointAdmin(_i1.EndpointCaller caller) : super(caller);
+
+  @override
+  String get name => 'admin';
+
+  /// Wipes players and battles. Returns the number of entities removed so the
+  /// panel can show a confirmation.
+  _i2.Future<int> reset() => caller.callServerEndpoint<int>(
+    'admin',
+    'reset',
+    {},
+  );
+
+  /// Registers [count] demo players and broadcasts a `playerAdded` event for
+  /// each. Returns the created players.
+  _i2.Future<List<_i3.Player>> seedPlayers(int count) =>
+      caller.callServerEndpoint<List<_i3.Player>>(
+        'admin',
+        'seedPlayers',
+        {'count': count},
+      );
+
+  /// Seeds a single demo battle between the two most recently seeded players
+  /// (or placeholder names when the store is empty) and broadcasts it.
+  _i2.Future<_i4.Battle> seedBattle() => caller.callServerEndpoint<_i4.Battle>(
+    'admin',
+    'seedBattle',
+    {},
+  );
+}
 
 /// Auth endpoint exposed to clients as `client.auth`.
 ///
@@ -31,11 +71,11 @@ class EndpointAuth extends _i1.EndpointRef {
   String get name => 'auth';
 
   /// Creates a new account and returns an [AuthUser] with a fresh token.
-  _i2.Future<_i3.AuthUser> register(
+  _i2.Future<_i5.AuthUser> register(
     String name,
     String email,
     String password,
-  ) => caller.callServerEndpoint<_i3.AuthUser>(
+  ) => caller.callServerEndpoint<_i5.AuthUser>(
     'auth',
     'register',
     {
@@ -46,10 +86,10 @@ class EndpointAuth extends _i1.EndpointRef {
   );
 
   /// Authenticates an existing account, issuing a fresh token.
-  _i2.Future<_i3.AuthUser> login(
+  _i2.Future<_i5.AuthUser> login(
     String email,
     String password,
-  ) => caller.callServerEndpoint<_i3.AuthUser>(
+  ) => caller.callServerEndpoint<_i5.AuthUser>(
     'auth',
     'login',
     {
@@ -135,10 +175,10 @@ class EndpointPlayers extends _i1.EndpointRef {
   String get name => 'players';
 
   /// Persists a player and broadcasts a `playerAdded` event.
-  _i2.Future<_i5.Player> registerPlayer(
+  _i2.Future<_i3.Player> registerPlayer(
     String name,
     List<String> pokemonNames,
-  ) => caller.callServerEndpoint<_i5.Player>(
+  ) => caller.callServerEndpoint<_i3.Player>(
     'players',
     'registerPlayer',
     {
@@ -149,16 +189,16 @@ class EndpointPlayers extends _i1.EndpointRef {
 
   /// Snapshot of currently registered players. Pair with [playerAdded] to
   /// initialise the lobby on subscribe.
-  _i2.Future<List<_i5.Player>> listPlayers() =>
-      caller.callServerEndpoint<List<_i5.Player>>(
+  _i2.Future<List<_i3.Player>> listPlayers() =>
+      caller.callServerEndpoint<List<_i3.Player>>(
         'players',
         'listPlayers',
         {},
       );
 
   /// Emits each new player as it is registered, until the client disconnects.
-  _i2.Stream<_i5.Player> playerAdded() =>
-      caller.callStreamingServerEndpoint<_i2.Stream<_i5.Player>, _i5.Player>(
+  _i2.Stream<_i3.Player> playerAdded() =>
+      caller.callStreamingServerEndpoint<_i2.Stream<_i3.Player>, _i3.Player>(
         'players',
         'playerAdded',
         {},
@@ -217,11 +257,14 @@ class Client extends _i1.ServerpodClientShared {
          disconnectStreamsOnLostInternetConnection:
              disconnectStreamsOnLostInternetConnection,
        ) {
+    admin = EndpointAdmin(this);
     auth = EndpointAuth(this);
     battles = EndpointBattles(this);
     players = EndpointPlayers(this);
     pokemon = EndpointPokemon(this);
   }
+
+  late final EndpointAdmin admin;
 
   late final EndpointAuth auth;
 
@@ -233,6 +276,7 @@ class Client extends _i1.ServerpodClientShared {
 
   @override
   Map<String, _i1.EndpointRef> get endpointRefLookup => {
+    'admin': admin,
     'auth': auth,
     'battles': battles,
     'players': players,

@@ -4,6 +4,9 @@ import 'package:pokebattle_serverpod_client/pokebattle_serverpod_client.dart';
 import 'package:testeador/expect.dart';
 import 'package:testeador/testeador.dart';
 
+/// Path to the Flutter app under test, relative to the server package root.
+const _flutterApp = '../pokebattle_serverpod_flutter';
+
 /// End-to-end flow that exercises the Serverpod stream contract from the
 /// host while two Flutter apps (running in their respective devices in
 /// auto-login mode) observe the UI react to server-pushed events.
@@ -28,7 +31,11 @@ import 'package:testeador/testeador.dart';
 TestFlowLasting buildServerStreamFlow({
   required List<TargetDevice> devices,
 }) {
-  final fleet = DeviceFleet(devices, evidenceDir: 'evidence');
+  final fleet = DeviceFleet(
+    devices,
+    evidenceDir: 'evidence',
+    workingDirectory: _flutterApp,
+  );
 
   const fireshName = 'Firesh';
   const watershName = 'Watersh';

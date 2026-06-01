@@ -1,3 +1,7 @@
+admin:
+  - reset:
+  - seedPlayers:
+  - seedBattle:
 auth:
   - register:
   - login:

@@ -1,14 +1,19 @@
 import 'package:testeador/expect.dart';
 import 'package:testeador/testeador.dart';
 
+/// Path to the Flutter app under test, relative to the server package root
+/// (where `dart test tool/multidev/...` is invoked from).
+const _flutterApp = '../pokebattle_serverpod_flutter';
+
 /// End-to-end smoke flow that proves the Serverpod streaming contract by
 /// driving the Flutter app on TWO devices in parallel via Patrol, and
 /// capturing side-by-side composite screenshots of every meaningful state.
 ///
-/// Run with two Android emulators booted (`emulator-5554` and `emulator-5556`):
+/// Run from the server package with two Android emulators booted
+/// (`emulator-5554` and `emulator-5556`):
 ///
 /// ```bash
-/// dart test test/contract_test.dart -N streaming
+/// dart test tool/multidev/contract_test.dart -N streaming
 /// ```
 TestFlowLasting buildStreamingSmokeFlow() {
   final fireshDevice = const AndroidEmulator(serial: 'emulator-5554');
@@ -16,6 +21,7 @@ TestFlowLasting buildStreamingSmokeFlow() {
   final fleet = DeviceFleet(
     [fireshDevice, watershDevice],
     evidenceDir: 'evidence',
+    workingDirectory: _flutterApp,
   );
 
   final ts = DateTime.now().millisecondsSinceEpoch;

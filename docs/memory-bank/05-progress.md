@@ -82,6 +82,18 @@
 - [x] roadmap.md (pains 2-7 driving evolution).
 - [x] example/pokebattle_rest/README.md (REST example overview).
 
+## What Works (v0.3.0 in-flight — uncommitted 2026-05-30)
+
+### Web as a driven device + web admin panel e2e
+
+- [x] **`WebDevice` is a driven Patrol-web target** — `patrolDeviceId`→`'chrome'`, `patrolExtraArgs()`→`--web-headless <bool> --web-viewport '{"width":W,"height":H}'`. Still doubles as the headless-Chrome evidence surface (`screenshot`). Corrected the leftover `gwsm-web` defaults.
+- [x] **`patrolCommandFor(device, target)`** — pure builder in [patrol_runner.dart](../../lib/src/multidev/patrol_runner.dart), shared by `PatrolRunner.runOn` and the MCP `run_patrol_fleet` planned-command path (android serial / ios udid / web `chrome`+flags).
+- [x] **MCP web wiring** — `run_patrol_fleet`/`boot`/`shutdown`/`snapshot` accept `platform: web` with `url`/`route`/`web_headless`/`viewport`; `list_devices` reports a `web` target via a Chrome probe. (Restart a running MCP server to load.)
+- [x] **Web admin panel** in `pokebattle_serverpod_flutter` (`lib/main_admin.dart` + `lib/admin/`): players, battles+detail, force-data (seed/reset), live stream monitor; all keyed for e2e.
+- [x] **Admin endpoint** `client.admin.reset()/seedPlayers(n)/seedBattle()` + `InMemoryStore.clear()`; seeds broadcast on the player/battle channels.
+- [x] **Patrol-web e2e** `integration_test/admin_overview_test.dart` — **1/1 green** in real headless Chrome, both via `patrol test --device chrome` and through `PatrolRunner.runOn(WebDevice(...))`.
+- [x] **Unblocked the Flutter example** — removed `testeador` from the Flutter app (resolved the `meta` conflict with `flutter_test`); host orchestration (`contract_test`, stream/smoke flows, `snapshot_fleet`) moved into `pokebattle_serverpod_server/tool/` + `bin/`. Flutter app now uses `patrol ^4.0.0` (+ `patrol_cli` 4.4.0, Playwright). Server codegen E2E still 8/8.
+
 ## What Works (v0.3.0 in-flight — uncommitted 2026-05-29)
 
 ### `TestInjector` Codegen (pure pipeline)

@@ -2,13 +2,36 @@
 
 **Update this file when:** New work begins, priorities shift, or blockers are resolved.
 
-**Last Updated:** 2026-05-29
+**Last Updated:** 2026-05-30
 
 ---
 
 ## Current Focus
 
-**Discover-and-pick (CLI + MCP) — landed 2026-05-29 (uncommitted).** Plan: `~/.claude/plans/podemos-hacer-una-feature-hidden-seahorse.md`.
+**Web e2e + admin panel — landed 2026-05-30 (uncommitted).** Plan: `~/.claude/plans/happy-splashing-candy.md`.
+
+`WebDevice` is now a **driven** Patrol-web target, not just an evidence surface. The fleet runs `patrol test --device chrome` against a Flutter web app, and a new web **admin panel** in the Serverpod example is the system under test.
+
+- **testeador package (multidev):**
+  - [target_device.dart](../../lib/src/multidev/target_device.dart): `TargetDevice` gained `patrolDeviceId` (default `id`; `WebDevice`→`'chrome'`) + `patrolExtraArgs()` (default empty; `WebDevice`→`--web-headless <bool> --web-viewport '{"width":W,"height":H}'`). Fixed `WebDevice` defaults left over from another project (`id` now `'chrome'`, not `gwsm-web`). **`--web-viewport` takes a JSON object, not `WxH`** — patrol_cli rejects `1280x900`.
+  - [patrol_runner.dart](../../lib/src/multidev/patrol_runner.dart): extracted pure `patrolCommandFor(device, target)` (single source of truth); `runOn` uses it. Android→`--device <serial>`, iOS→`--device <udid>`, web→`--device chrome` + web flags.
+  - [multidev_tools.dart](../../lib/src/mcp/tools/multidev_tools.dart): `_buildDevices` parses `web_headless`/`viewport`; `run_patrol_fleet` planned command uses `patrolCommandFor`; schema adds web props. [device_lister.dart](../../lib/src/mcp/device_lister.dart): `list_devices` adds a `web` target (Chrome probe). **Note:** a running MCP server must be restarted to pick these up.
+  - Tests: [test/multidev/patrol_command_test.dart](../../test/multidev/patrol_command_test.dart) (new, android/ios/web) + updated [web_device_test.dart](../../test/multidev/web_device_test.dart). Full package suite 93 green / 1 skip.
+- **Example — web admin panel** ([pokebattle_serverpod_flutter/lib/main_admin.dart](../../example/pokebattle_serverpod/pokebattle_serverpod_flutter/lib/main_admin.dart) + [lib/admin/](../../example/pokebattle_serverpod/pokebattle_serverpod_flutter/lib/admin/)): separate entrypoint (`flutter run -d chrome -t lib/main_admin.dart`) covering players, battles+detail, force-data (seed/reset), and a live stream monitor. All widgets carry `Admin*` / dynamic keys.
+- **Example — server** ([admin_endpoint.dart](../../example/pokebattle_serverpod/pokebattle_serverpod_server/lib/src/endpoints/admin_endpoint.dart)): `client.admin.reset()/seedPlayers(n)/seedBattle()` (seeds broadcast on the player/battle channels so the live monitor reacts). `InMemoryStore.clear()` added. `serverpod generate` re-run.
+- **Example — e2e** ([integration_test/admin_overview_test.dart](../../example/pokebattle_serverpod/pokebattle_serverpod_flutter/integration_test/admin_overview_test.dart)): one `patrolTest` driving the panel in real headless Chrome (reset → seed players → seed battle → live monitor → open/close battle detail). **Verified 1/1 green** both via `patrol test --device chrome` directly AND through testeador's `PatrolRunner.runOn(WebDevice(...))`.
+
+### Pre-existing blocker resolved: testeador ↔ flutter_test (meta)
+
+The Flutter example could not `pub get`: `testeador` (analyzer ^13 → meta ^1.18) was a dev_dependency of `pokebattle_serverpod_flutter`, conflicting with `flutter_test` (meta 1.17, SDK-pinned). **Fix:** removed `testeador` from the Flutter app and moved the four host-orchestration files into the server package (which already resolves with testeador outside the workspace):
+
+- `tool/multidev/contract_test.dart`, `tool/multidev/flows/server_stream_flow.dart`, `tool/multidev/flows/streaming_smoke_flow.dart`, `bin/snapshot_fleet.dart` now live under `pokebattle_serverpod_server/`. They sit under `tool/` (not `test/`) so the server's default `dart test` (codegen suite) doesn't auto-run device-needing flows; invoke explicitly: `dart test tool/multidev/contract_test.dart -N streaming`. The `DeviceFleet` `workingDirectory` points at `../pokebattle_serverpod_flutter`. The server gained a path dep on `pokebattle_serverpod_client`.
+- The Flutter app now depends only on `patrol: ^4.0.0` (resolves to 4.6.1; `patrol_cli` 4.4.0) + a `patrol:` pubspec block with `test_directory: integration_test` (Patrol 4.x defaults to `patrol_test`). Server codegen E2E still 8/8 green.
+- **Prereqs for web e2e:** Node (present) + `dart pub global activate patrol_cli`. First `patrol test` run auto-installs Playwright.
+
+---
+
+**Previous focus: Discover-and-pick (CLI + MCP) — landed 2026-05-29 (uncommitted).** Plan: `~/.claude/plans/podemos-hacer-una-feature-hidden-seahorse.md`.
 
 New surface for the codegen feature: an inventory + scaffold flow built on top of the existing capture-manifest artifacts.
 
@@ -91,7 +114,7 @@ Earlier context — multi-device streaming example. The repo has two examples an
 
 - `example/pokebattle_rest/` — the original REST example (renamed from `example/`). HTTP smoke flow unchanged; only the testeador path in its pubspec was bumped to `../../`.
 - `example/pokebattle_serverpod/` — new Serverpod streaming example. Three sub-packages (`_server`, `_client`, `_flutter`). The Flutter app mirrors the REST example screen-by-screen but the lobby auto-updates via `playerAdded` / `battleAdded` streams (the AppBar shows a `● Live` chip to distinguish it).
-- `lib/src/multidev/` — public API for orchestrating N emulators/simulators in parallel: `TargetDevice` / `AndroidEmulator` / `IosSimulator`, `DeviceFleet`, `FlutterActor`, `PatrolRunner`, `ScreenshotBundle`, `ScreenshotComposer` (side-by-side composite). Re-exported from `lib/testeador.dart`.
+- `lib/src/multidev/` — public API for orchestrating N emulators/simulators/browsers in parallel: `TargetDevice` / `AndroidEmulator` / `IosSimulator` / `WebDevice`, `patrolCommandFor`, `DeviceFleet`, `FlutterActor`, `PatrolRunner`, `ScreenshotBundle`, `ScreenshotComposer` (side-by-side composite). Re-exported from `lib/testeador.dart`.
 
 ## Active Decision Points
 

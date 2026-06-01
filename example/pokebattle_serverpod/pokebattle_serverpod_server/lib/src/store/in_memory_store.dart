@@ -48,4 +48,15 @@ class InMemoryStore {
 
   /// Snapshot of all currently active battles (insertion order).
   List<Battle> listBattles() => List.unmodifiable(_battlesById.values);
+
+  /// Wipes players and battles (leaves auth users intact so an admin session
+  /// survives a reset). Used by the admin panel's "force data" controls.
+  ///
+  /// Returns the number of players + battles removed.
+  int clear() {
+    final removed = _playersById.length + _battlesById.length;
+    _playersById.clear();
+    _battlesById.clear();
+    return removed;
+  }
 }

@@ -24,14 +24,16 @@ void _registerListDevices(McpServer server) {
     'list_devices',
     description:
         'Lists locally available test devices. Combines `adb devices -l` '
-        '(Android emulators + USB devices) and `xcrun simctl list devices '
-        '--json` (iOS simulators) and returns a single structured payload '
-        'with serial, state, AVD name (Android emulators only), name, and '
-        'runtime (iOS). Read-only; does not boot anything.',
+        '(Android emulators + USB devices), `xcrun simctl list devices '
+        '--json` (iOS simulators), and a Chrome probe (the `web` target, '
+        'present when a runnable Chrome binary is found). Returns a single '
+        'structured payload with serial, state, AVD name (Android emulators '
+        'only), name, runtime (iOS), and chrome path/version (web). Read-only; '
+        'does not boot anything.',
     inputSchema: JsonSchema.object(
       properties: {
         'platform': JsonSchema.string(
-          enumValues: ['android', 'ios', 'all'],
+          enumValues: ['android', 'ios', 'web', 'all'],
           defaultValue: 'all',
         ),
       },
@@ -66,19 +68,58 @@ List<TargetDevice> _buildDevices(Object? raw) {
       );
     } else if (platform == 'ios') {
       out.add(IosSimulator(udid: id));
+    } else if (platform == 'web') {
+      final viewport = _parseViewport(entry['viewport']);
+      out.add(
+        WebDevice(
+          baseUrl: entry['url'] as String? ?? id,
+          id: id,
+          route: entry['route'] as String? ?? '/',
+          webHeadless: entry['web_headless'] as bool? ?? true,
+          width: viewport?.$1 ?? 1280,
+          height: viewport?.$2 ?? 900,
+        ),
+      );
     }
   }
   return out;
+}
+
+/// Parses a `'<width>x<height>'` viewport string (e.g. `1280x900`).
+///
+/// Returns `null` when [raw] is not a well-formed `WxH` string so the caller
+/// falls back to [WebDevice]'s defaults.
+(int, int)? _parseViewport(Object? raw) {
+  if (raw is! String) return null;
+  final m = RegExp(r'^(\d+)x(\d+)$').firstMatch(raw.trim());
+  if (m == null) return null;
+  return (int.parse(m.group(1)!), int.parse(m.group(2)!));
 }
 
 JsonSchema _devicesSchema() => JsonSchema.array(
       items: JsonSchema.object(
         properties: {
           'platform':
-              JsonSchema.string(enumValues: ['android', 'ios']),
+              JsonSchema.string(enumValues: ['android', 'ios', 'web']),
           'id': JsonSchema.string(),
           'avd_name': JsonSchema.string(),
           'headless': JsonSchema.boolean(defaultValue: false),
+          'url': JsonSchema.string(
+            description: 'Web only: origin the app is served from '
+                '(e.g. http://localhost:5000). Falls back to `id`.',
+          ),
+          'route': JsonSchema.string(
+            description: 'Web only: route appended to `url` before capture.',
+          ),
+          'web_headless': JsonSchema.boolean(
+            defaultValue: true,
+            description: 'Web only: run Chromium headless during '
+                '`patrol test` (--web-headless). Set false to watch locally.',
+          ),
+          'viewport': JsonSchema.string(
+            description: 'Web only: `<width>x<height>` for `patrol test` '
+                '(--web-viewport) and screenshots. Defaults to 1280x900.',
+          ),
         },
         required: ['platform', 'id'],
       ),
@@ -243,8 +284,10 @@ void _registerRunPatrolFleet(McpServer server, WorkspaceConfig workspace) {
         'branch on which actor it represents. Returns per-device exit code, '
         'pass/fail, and stdout/stderr tails (last 4 KB each). Requires '
         '`working_directory` to point at the Flutter package that owns the '
-        'integration test. When `execute: false`, returns the planned '
-        'commands without spawning.',
+        'integration test. Web devices (`platform: web`) run '
+        '`patrol test --device chrome` with the `--web-*` flags (Patrol 4.0+ '
+        'drives Flutter web via Playwright; needs Node + patrol_cli 4.x). When '
+        '`execute: false`, returns the planned commands without spawning.',
     inputSchema: JsonSchema.object(
       properties: {
         'devices': _devicesSchema(),
@@ -280,14 +323,7 @@ void _registerRunPatrolFleet(McpServer server, WorkspaceConfig workspace) {
             .map(
               (d) => {
                 'device_id': d.id,
-                'command': [
-                  'patrol',
-                  'test',
-                  '--target',
-                  target,
-                  '--device',
-                  d.id,
-                ],
+                'command': ['patrol', ...patrolCommandFor(d, target)],
                 'env': {'DEVICE_ID': d.id, ...?envPerDevice[d.id]},
               },
             )
