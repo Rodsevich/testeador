@@ -654,3 +654,30 @@ Compile: `dart compile exe example/pokebattle_rest/bin/run_tests.dart -o bin/tes
 | Header redaction | Opt-out (default: redact `authorization`, `cookie`) | Safer default for CI logs |
 | `actors` on `Testeador` | Separate from `flows` | Actors are created outside flows in the entry point; runner manages their log lifecycle |
 | No mocks | All HTTP calls go to real APIs | In-memory fakes cannot catch contract regressions; integration tests must exercise the real backend |
+
+---
+
+## Dependency Rationale
+
+| Dependency | Why | Could it be removed? |
+| --- | --- | --- |
+| `dio` | HTTP client with interceptor API (enables `CurlInterceptor`) | No; core to the design |
+| `args` | CLI argument parsing | Possible, but reinventing the wheel; good library |
+| `test` | Framework for `registerWithDartTest()` integration | No; hard dependency for this mode |
+| `mocktail` (dev) | Mock framework for testeador's own unit tests | Yes, but useful internally; kept for dev convenience |
+| `very_good_analysis` (dev) | Linting; ensures code quality | No; dev-only; improves maintainability |
+
+Dependencies are pinned to ranges (`^X.Y.Z`): bug fixes and minor versions allowed, breaking changes prevented. `analyzer` is at 13+ (pulled in by `source_gen 4.x` for the codegen pipeline), which in turn requires `meta 1.18+` — this conflicts with `flutter_test` (pinned to `meta 1.17`), so Flutter sub-packages must resolve outside `resolution: workspace` or wait for the Flutter SDK to catch up.
+
+## Environment Constraints
+
+- **Network access:** Tests must reach real APIs (staging, sandbox, or public). Firewall rules must allow outbound HTTP/HTTPS.
+- **API availability:** If an external API (e.g., PokéAPI) is down, tests fail. Use staging/sandbox APIs under your control in production CI.
+- **Dart SDK:** `^3.11.0` or later. The compiled binary has no SDK dependency.
+- **OS:** Linux, macOS, Windows (tested on macOS; other platforms assumed compatible).
+
+## Known Build/Runtime Issues
+
+1. **`dart compile exe` binary size.** On macOS, AOT binaries can be 100+ MB — normal for Dart. Strip with `strip bin/test_runner` if size matters.
+2. **Cross-platform compilation.** `dart compile exe` targets the host platform only. To target another OS, compile on that OS.
+3. **TLS/SSL certificates.** On some CI systems, TLS verification may fail for self-signed certs. Configure `Dio`'s `httpClientAdapter` to relax verification where appropriate.
