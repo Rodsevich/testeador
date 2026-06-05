@@ -1,14 +1,12 @@
 # Project Brief: Testeador
 
-**Update this file when:** Project scope, name, or fundamental purpose changes.
+*Update when: scope, name, or fundamental purpose changes.*
 
----
+Testeador is a Dart package that orchestrates sequential integration test flows for contract testing. Frontend teams write tests once; they run in both frontend and backend CI, catching API contract breaks before production.
 
-Testeador es un paquete Dart que orquesta flujos de integración secuenciales para
-contract testing: los tests de integración del frontend corren **sin cambios** en el CI
-del backend y detectan rupturas de contrato (renombre de campos, cambios de shape,
-endpoints removidos) antes de que lleguen a producción.
+- **In:** frontend test flows (`TestFlowLasting`/`TestFlowTransient`) and actors (personas).
+- **Out:** pass/fail; on failure, a cURL log to reproduce the exact request sequence.
+- **Key constraint:** no mocks — all HTTP calls hit real APIs.
+- **Status:** v0.2.0, public API stable, `publish_to: none` (pub.dev on roadmap). Dart SDK `^3.11.0`.
 
-- **Qué es y por qué existe:** [`docs/PRD.md`](../PRD.md), [`README.md`](../../README.md).
-- **Reglas núcleo (no-mocks, ejecución secuencial, etc.):** [`AGENTS.md`](../../AGENTS.md) §Critical Rules.
-- **Versión / estado de publicación:** [`pubspec.yaml`](../../pubspec.yaml), [`CHANGELOG.md`](../../CHANGELOG.md).
+Why it exists → [PROBLEM.md](../PROBLEM.md) · product detail → [PRD.md](../PRD.md) · usage → [README.md](../../README.md).

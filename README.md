@@ -6,202 +6,111 @@ Sequential integration test orchestrator for Dart — runs frontend contract tes
 ![Dart SDK](https://img.shields.io/badge/dart-%5E3.11.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-## The Problem
-
-Frontend teams write integration tests that validate the contracts a backend exposes: API shapes, field names, response structures. Those tests only run in the frontend pipeline, so a backend developer can rename a field or remove an endpoint and nobody notices until the frontend breaks in production. `testeador` lets you run those same frontend tests inside the backend CI pipeline — catching contract regressions before they merge.
+Frontend teams write integration tests that pin down a backend's contract (field names, response shapes, endpoints). Those tests normally run only in the frontend pipeline, so a backend change can silently break them until production. `testeador` runs the *same* frontend tests inside the backend CI, catching contract regressions before they merge. Full rationale: [docs/PROBLEM.md](docs/PROBLEM.md).
 
 ## How It Works
 
-You group `TestStep`s into `TestFlow`s and hand them to `Testeador`. Each `Actor` gets its own `Dio` instance with a `CurlInterceptor` that records every outgoing HTTP call as a cURL command. Flows execute sequentially; if a step fails, `testeador` prints the full cURL log for every actor so backend developers can reproduce the exact request sequence. Run via `dart test` or compile to a standalone binary with `dart compile exe` — no Dart SDK required in CI.
+Group `TestStep`s into `TestFlow`s and hand them to `Testeador`. Each `Actor` gets a `Dio` instance with a `CurlInterceptor` that records every HTTP call as a cURL command. Flows run sequentially; on failure, `testeador` prints the full cURL log per actor so backend devs reproduce the exact request sequence. Run via `dart test` or compile to a standalone binary with `dart compile exe` — no Dart SDK needed in CI.
 
-> **No mocks.** `testeador` is for integration tests. All HTTP calls must go to real APIs.
-> In-memory stores and local fakes defeat the purpose of contract testing.
+> **No mocks.** All HTTP calls must go to real APIs (staging, sandbox, public). In-memory fakes defeat contract testing.
 
 ## Concepts
 
+Class signatures and design rationale live in [docs/architecture.md](docs/architecture.md). This section shows how you use each piece.
+
 ### Actor
 
-An `Actor` represents a user persona in a test flow. Subclass it to provide a pre-configured `Dio` instance (base URL, auth headers, etc.). `Testeador` injects the `CurlInterceptor` into `actor.dio` before running, so all HTTP calls made through that `Dio` are recorded and printed on failure.
+A user persona. Subclass it with a pre-configured `Dio` (base URL, auth headers). `Testeador` injects the `CurlInterceptor` into `actor.dio`, so any call made through that `Dio` is recorded and printed on failure.
 
 ```dart
 import 'package:testeador/testeador.dart';
 
-class MyActor extends Actor {
-  MyActor() : super(
-    name: 'MyActor',
+class AliceActor extends Actor {
+  AliceActor() : super(
+    name: 'Alice',
     dio: Dio(BaseOptions(baseUrl: 'https://api.example.com')),
-  );
-}
-
-// Actor with custom header redaction
-class AdminActor extends Actor {
-  AdminActor() : super(
-    name: 'Admin',
-    dio: Dio(BaseOptions(baseUrl: 'https://api.example.com')),
-    redactHeaders: {'authorization', 'cookie', 'x-api-key'},
+    redactHeaders: {'authorization', 'cookie', 'x-api-key'}, // optional override
   );
 }
 ```
 
-Pass `actor.dio` to any repository or HTTP client so its calls appear in the cURL log.
+Pass `actor.dio` to any repository or HTTP client so its calls appear in the log.
 
 ### Fixture\<T\>
 
-A `Fixture<T>` pre-loads resources before a flow's steps run. Subclass it, implement `load()` to return a typed context object `T`, and optionally override `dispose(T)` for cleanup (called even on failure).
+Pre-loads resources before a flow's steps run. Implement `load()` to return a typed context `T`; optionally override `dispose(T)` for cleanup (called even on failure, default no-op).
 
 ```dart
-class PokemonContext {
-  const PokemonContext({required this.firePokemon, required this.waterPokemon});
-  final List<Pokemon> firePokemon;
-  final List<Pokemon> waterPokemon;
-}
-
 class PokemonFixture extends Fixture<PokemonContext> {
   @override
   Future<PokemonContext> load() async {
-    final dio = Dio();
-    final client = PokeApiClient(dio);
-    final fire = await Future.wait([
-      client.fetchPokemon('charizard'),
-      client.fetchPokemon('arcanine'),
-    ]);
-    final water = await Future.wait([
-      client.fetchPokemon('blastoise'),
-      client.fetchPokemon('vaporeon'),
-    ]);
-    return PokemonContext(firePokemon: fire, waterPokemon: water);
+    final client = PokeApiClient(Dio());
+    final fire = await client.fetchPokemon('charizard');
+    return PokemonContext(firePokemon: [fire]);
   }
-  // dispose() is a no-op by default — override if you need cleanup
 }
 ```
 
 ### TestStep
 
-A `TestStep` is a single named action. Its `action` is a zero-argument async callback; actors, repositories, and shared state are captured via closure.
+A single named action. Its `action` is a zero-argument async callback; actors, repositories, and shared state are captured via closure.
 
 ```dart
-String? createdId; // shared mutable state across steps
-
 TestStep(
   name: 'Alice creates a resource',
   action: () async {
     final result = await repo.create(name: 'test');
-    createdId = result.id;
+    createdId = result.id; // shared state captured by closure
     expect(result.name, equals('test'));
   },
-),
+)
 ```
 
 ### TestFlow
 
-A `TestFlow` is a named, ordered sequence of `TestStep`s with an optional `Fixture` and a set of tags for filtering.
+A named, ordered sequence of `TestStep`s with an optional `Fixture` and tags for filtering.
 
-- **`TestFlowLasting`** — side effects intentionally persist after execution (seeding data, write-path tests).
-- **`TestFlowTransient`** — ⚠️ **TODO**: marker type only. No rollback is implemented. Behaves identically to `TestFlowLasting` at runtime.
-
-```dart
-TestFlowLasting buildMyFlow() {
-  final actor = MyActor();
-  final repo = MyRepository(actor.dio);
-  String? createdId;
-
-  return TestFlowLasting(
-    name: 'Alice — create and retrieve resource',
-    tags: {'smoke'},
-    steps: [
-      TestStep(
-        name: 'Alice creates a resource',
-        action: () async {
-          final result = await repo.create(name: 'test');
-          createdId = result.id;
-          expect(result.name, equals('test'));
-        },
-      ),
-      TestStep(
-        name: 'Alice retrieves the resource',
-        action: () async {
-          final result = await repo.getById(createdId!);
-          expect(result, isNotNull);
-        },
-      ),
-    ],
-  );
-}
-```
+- **`TestFlowLasting`** — side effects intentionally persist (seeding, write-path tests).
+- **`TestFlowTransient`** — ⚠️ **TODO**: marker type only, no rollback implemented; behaves like `TestFlowLasting` at runtime.
 
 ### Testeador
 
-`Testeador` is the top-level orchestrator. Construct it with your flows and actors, then choose an execution mode:
+The orchestrator. Construct it with your flows and actors, then pick a mode:
 
-**`registerWithDartTest([TesteadorOptions])`** — registers flows as `group()`/`test()` blocks with `package:test`. Call from `main()` in a `*_test.dart` file.
-
-```dart
-// test/pokemon_suite_test.dart
-void main() {
-  final actor = MyActor();
-  Testeador(
-    flows: [buildMyFlow()],
-    actors: [actor],
-  ).registerWithDartTest(
-    const TesteadorOptions(verbose: true),
-  );
-}
-```
-
-Run with: `dart test test/pokemon_suite_test.dart`
-
-**`run(List<String> args)`** — parses CLI flags, executes flows sequentially, prints results, and calls `exit()`. Use for standalone binaries.
-
-```dart
-// bin/run_tests.dart
-Future<void> main(List<String> args) async {
-  final actor = MyActor();
-  await Testeador(
-    flows: [buildMyFlow()],
-    actors: [actor],
-  ).run(args);
-}
-```
+- **`registerWithDartTest([TesteadorOptions])`** — registers flows as `group()`/`test()` blocks with `package:test`. Run with `dart test`.
+- **`run(List<String> args)`** — parses CLI flags, executes sequentially, calls `exit()`. For standalone binaries.
 
 #### CLI flags
 
 | Flag | Default | Description |
-|---|---|---|
-| `--include-tags` | — | Comma-separated tags; only matching flows run |
-| `--exclude-tags` | — | Comma-separated tags; matching flows are skipped |
-| `--include-flows` | — | Comma-separated flow names; only matching flows run |
-| `--exclude-flows` | — | Comma-separated flow names; matching flows are skipped |
+| --- | --- | --- |
+| `--include-tags` / `--exclude-tags` | — | Comma-separated tags; filter which flows run |
+| `--include-flows` / `--exclude-flows` | — | Comma-separated flow names; filter which flows run |
 | `--[no-]fail-fast` | `true` | Stop after the first flow failure |
-| `--[no-]verbose` / `-v` | `false` | Print step names and fixture events as they run |
+| `--[no-]verbose` / `-v` | `false` | Print step names and fixture events |
 | `--[no-]exit-on-failure` | `true` | Exit with code 1 when any flow fails |
-| `--[no-]show-curls` | `true` | Print the cURL log for actors on failure |
+| `--[no-]show-curls` | `true` | Print the cURL log on failure |
 | `--[no-]show-stack-traces` | `false` | Print Dart stack traces on failure |
 | `--help` / `-h` | — | Show usage |
 
 ## Quick Start
 
-**1. Add the dependency:**
+**1. Add the dependency** (`pubspec.yaml`):
 
 ```yaml
-# pubspec.yaml
 dependencies:
   testeador:
     git: https://github.com/your-org/testeador.git
   dio: ^5.0.0
 ```
 
-**2. Create an actor and a flow:**
+**2. Define an actor and a flow** (`test/my_flow.dart`):
 
 ```dart
-// test/my_flow.dart
 import 'package:testeador/testeador.dart';
-import 'package:test/test.dart';
 
 class AliceActor extends Actor {
-  AliceActor() : super(
-    name: 'Alice',
-    dio: Dio(BaseOptions(baseUrl: 'https://api.example.com')),
-  );
+  AliceActor() : super(name: 'Alice', dio: Dio(BaseOptions(baseUrl: 'https://api.example.com')));
 }
 
 TestFlowLasting buildMyFlow() {
@@ -213,92 +122,53 @@ TestFlowLasting buildMyFlow() {
     name: 'Alice — create and retrieve resource',
     tags: {'smoke'},
     steps: [
-      TestStep(
-        name: 'Alice creates a resource',
-        action: () async {
-          final result = await repo.create(name: 'test');
-          createdId = result.id;
-          expect(result.name, equals('test'));
-        },
-      ),
-      TestStep(
-        name: 'Alice retrieves the resource',
-        action: () async {
-          final result = await repo.getById(createdId!);
-          expect(result, isNotNull);
-        },
-      ),
+      TestStep(name: 'Alice creates a resource', action: () async {
+        final result = await repo.create(name: 'test');
+        createdId = result.id;
+        expect(result.name, equals('test'));
+      }),
+      TestStep(name: 'Alice retrieves the resource', action: () async {
+        final result = await repo.getById(createdId!);
+        expect(result, isNotNull);
+      }),
     ],
   );
 }
 ```
 
-**3. Wire up the entry point:**
+**3. Wire the entry point** (`bin/run_tests.dart`):
 
 ```dart
-// bin/run_tests.dart
-import 'package:testeador/testeador.dart';
-import '../test/my_flow.dart';
-
 Future<void> main(List<String> args) async {
-  final actor = AliceActor();
-  await Testeador(
-    flows: [buildMyFlow()],
-    actors: [actor],
-  ).run(args);
+  await Testeador(flows: [buildMyFlow()], actors: [AliceActor()]).run(args);
 }
 ```
 
 **4. Run:**
 
 ```bash
-dart run bin/run_tests.dart
-dart run bin/run_tests.dart --include-tags smoke --verbose
-```
-
-## CLI Usage
-
-```bash
-# Run all flows
-dart run bin/run_tests.dart
-
-# Run only flows tagged 'smoke'
-dart run bin/run_tests.dart --include-tags smoke
-
-# Run a specific flow by name
+dart run bin/run_tests.dart                                    # all flows
+dart run bin/run_tests.dart --include-tags smoke --verbose     # filter by tag
 dart run bin/run_tests.dart --include-flows "Alice — create and retrieve resource"
-
-# Verbose output, don't stop on first failure
-dart run bin/run_tests.dart --verbose --no-fail-fast
-
-# Compile to a standalone binary (no Dart SDK needed in CI)
-dart compile exe bin/run_tests.dart -o bin/test_runner
-./bin/test_runner --include-tags smoke --verbose
+dart compile exe bin/run_tests.dart -o bin/test_runner         # standalone binary (no SDK in CI)
+./bin/test_runner --include-tags smoke
 ```
 
 ## CLI
 
-testeador ships a single executable, `testeador`, with subcommands. Declared
-under `executables:` in [`pubspec.yaml`](pubspec.yaml); entrypoint
-[`bin/testeador.dart`](bin/testeador.dart).
+testeador ships a single executable, `testeador`, with subcommands (declared in [`pubspec.yaml`](pubspec.yaml); entrypoint [`bin/testeador.dart`](bin/testeador.dart)).
 
 ```bash
 dart run testeador --help            # list subcommands
 dart run testeador mcp --version     # MCP server smoke check
-dart run testeador mcp --print-config
 dart run testeador discover          # list captured tests (codegen)
-dart run testeador discover --help   # discover subcommand help
 ```
 
 ## MCP Server (`testeador mcp`)
 
-`testeador mcp` is a Model Context Protocol server exposing every feature of
-the package to any MCP client (Claude Code, Cursor, etc.). Implementation
-under [`lib/src/mcp/`](lib/src/mcp/).
+`testeador mcp` is a Model Context Protocol server exposing every package feature to any MCP client (Claude Code, Cursor, etc.). Implementation under [`lib/src/mcp/`](lib/src/mcp/).
 
-It operates on the project named by `TESTEADOR_PROJECT_ROOT` (falling back to
-the nearest ancestor of CWD whose `pubspec.yaml` is or depends on testeador),
-so consumers add it to their own `.mcp.json`:
+It operates on the project named by `TESTEADOR_PROJECT_ROOT` (falling back to the nearest ancestor of CWD whose `pubspec.yaml` is or depends on testeador), so consumers add it to their own `.mcp.json`:
 
 ```jsonc
 {
@@ -318,35 +188,18 @@ so consumers add it to their own `.mcp.json`:
 
 Tool groups:
 
-- **Introspection** — `list_suites`, `inspect_suite`, `list_tags`,
-  `dry_run_suite` (parse suites via the Dart analyzer; never spawn).
-- **Execution** — `run_suite_cli`, `run_suite_dart_test`, `compile_suite_exe`
-  (each accepts `execute: false` to return the command line only; cURL logs
-  and pass/fail counts are parsed out of the run).
-- **Scaffolding** — `scaffold_actor`, `scaffold_fixture`, `scaffold_flow`,
-  `scaffold_suite_runner`, `scaffold_dart_test_main` (each accepts
-  `dry_run: true` to preview without writing).
-- **Multidev** — `list_devices`, `boot_fleet`, `shutdown_fleet`,
-  `snapshot_fleet`, `run_patrol_fleet` (gated behind
-  `TESTEADOR_MCP_ENABLE_MULTIDEV=1`; require `adb`/`xcrun` for mobile).
-  Devices are `{platform: android|ios|web, id, …}`. A **web** device drives a
-  Flutter web app in real Chrome via Patrol 4.0+ (Playwright):
-  `run_patrol_fleet` runs `patrol test --device chrome --web-headless <bool>
-  --web-viewport '{"width":W,"height":H}'`. Web e2e needs Node + `patrol_cli`
-  4.x (`dart pub global activate patrol_cli`); the first run auto-installs
-  Playwright. The same `WebDevice` also serves as a headless-Chrome **evidence
-  surface** for `snapshot_fleet` (pass `url`/`route`).
+- **Introspection** — `list_suites`, `inspect_suite`, `list_tags`, `dry_run_suite` (parse suites via the Dart analyzer; never spawn).
+- **Execution** — `run_suite_cli`, `run_suite_dart_test`, `compile_suite_exe` (each accepts `execute: false` for command-only; cURL logs and pass/fail counts are parsed out).
+- **Scaffolding** — `scaffold_actor`, `scaffold_fixture`, `scaffold_flow`, `scaffold_suite_runner`, `scaffold_dart_test_main` (each accepts `dry_run: true`).
+- **Multidev** — `list_devices`, `boot_fleet`, `shutdown_fleet`, `snapshot_fleet`, `run_patrol_fleet` (gated behind `TESTEADOR_MCP_ENABLE_MULTIDEV=1`; require `adb`/`xcrun` for mobile). A **web** device drives a Flutter web app in real Chrome via Patrol 4.0+ (Playwright) and doubles as a headless-Chrome evidence surface for `snapshot_fleet`. Web e2e needs Node + `patrol_cli` 4.x (`dart pub global activate patrol_cli`); first run auto-installs Playwright.
 
-It also serves the scaffolding templates and project docs as MCP **resources**
-(`testeador://templates/*`, `testeador://docs/*`) and two **prompts**
-(`scaffold_suite`, `diagnose_failure`).
+It also serves scaffolding templates and project docs as MCP **resources** (`testeador://templates/*`, `testeador://docs/*`) and two **prompts** (`scaffold_suite`, `diagnose_failure`).
 
 ## Example
 
-The [`example/`](example/) directory hosts the example apps. [`example/pokebattle_rest/`](example/pokebattle_rest/) is the REST-backed PokéBattle scenario with two actors (Firesh and Watersh) and `TestFlowLasting` flows running against real HTTP backends: **PokéAPI** (`https://pokeapi.co/api/v2`) for Pokémon data and **restful-api.dev** (`https://api.restful-api.dev`) for player registration and battles. [`example/pokebattle_serverpod/`](example/pokebattle_serverpod/) is the streaming variant on Serverpod (auto-updates via push, multi-device E2E). It also ships a **web admin panel** (`pokebattle_serverpod_flutter/lib/main_admin.dart`: players, battles, force-data, live stream monitor) driven end-to-end in real Chrome by Patrol-web (`integration_test/admin_overview_test.dart`). See [`example/pokebattle_rest/README.md`](example/pokebattle_rest/README.md) for the REST example details.
+[`example/pokebattle_rest/`](example/pokebattle_rest/) is the REST-backed PokéBattle scenario: two actors (Firesh, Watersh), `TestFlowLasting` flows against real backends — **PokéAPI** for Pokémon data and **restful-api.dev** for players and battles. [`example/pokebattle_serverpod/`](example/pokebattle_serverpod/) is the streaming variant on Serverpod (push auto-updates, multi-device E2E) and ships a **web admin panel** driven end-to-end in real Chrome by Patrol-web. See [`example/pokebattle_rest/README.md`](example/pokebattle_rest/README.md) for details.
 
 ```bash
-dart run example/pokebattle_rest/bin/run_tests.dart
 dart run example/pokebattle_rest/bin/run_tests.dart --include-tags smoke --verbose
 ```
 

@@ -1,44 +1,12 @@
-# Testeador — Architecture Document
+# Testeador — Architecture
 
-> **Version:** 0.2.0  
-> **Dart SDK:** `^3.11.0`  
-> **Status:** Reflects actual implementation
+> **Version:** 0.2.0 · **Dart SDK:** `^3.11.0` · **Status:** reflects actual implementation.
 
----
-
-## Table of Contents
-
-1. [Overview](#overview)
-2. [Class Hierarchy](#class-hierarchy)
-3. [Fixture](#fixture)
-4. [Actor](#actor)
-5. [TestStep](#teststep)
-6. [TestFlow](#testflow)
-7. [Testeador](#testeador)
-8. [Dio cURL Interceptor](#dio-curl-interceptor)
-9. [File Structure](#file-structure)
-10. [Public API](#public-api)
-11. [Example Walkthrough — Pokémon with Firesh and Watersh](#example-walkthrough)
-12. [Key Design Decisions](#key-design-decisions)
-
----
+Full technical reference: class model, interfaces, execution flow, and glossary. Usage and quick start live in [README.md](../README.md); product context in [PRD.md](PRD.md).
 
 ## Overview
 
-**Testeador** groups integration tests into sequential flows, provides each actor with a `Dio` instance whose `CurlInterceptor` records every HTTP call as a cURL command, and ensures steps run in declaration order. On failure it prints the cURL log accumulated by each actor so backend developers can reproduce the exact request sequence. It runs either via `dart test` (using `registerWithDartTest()`) or as a compiled standalone binary (using `run(args)`).
-
-### Core design goals
-
-| Goal | Decision |
-|---|---|
-| Works with `dart test` natively | `registerWithDartTest()` registers flows as `group()`/`test()` blocks with `package:test` |
-| Standalone binary for CI | `run(args)` parses CLI flags and calls `exit()`; compile with `dart compile exe` |
-| HTTP observability | `Dio` + `CurlInterceptor` records every request; log is printed on failure |
-| Multi-user scenarios | `Actor` encapsulates a named `Dio` instance with its own cURL log |
-| Sequential execution | Steps within a flow always run in declaration order |
-| No mocks | All HTTP calls must go to real APIs; in-memory fakes defeat contract testing |
-
----
+Testeador groups integration tests into sequential flows, gives each actor a `Dio` instance whose `CurlInterceptor` records every HTTP call as a cURL command, and runs steps in declaration order. On failure it prints each actor's cURL log so backend developers can reproduce the exact request sequence. It runs via `dart test` (`registerWithDartTest()`) or as a compiled standalone binary (`run(args)`). Design rationale is consolidated in [Key Design Decisions](#key-design-decisions).
 
 ## Class Hierarchy
 
@@ -49,7 +17,6 @@ classDiagram
         +Future~T~ load()
         +Future~void~ dispose(T data)
     }
-
     class Actor {
         <<abstract>>
         +String name
@@ -57,21 +24,18 @@ classDiagram
         +CurlInterceptor curlInterceptor
         +Set~String~ redactHeaders
     }
-
     class CurlInterceptor {
         +Set~String~ redactHeaders
         +List~String~ log
         +void clear()
         +onRequest(options, handler)
     }
-
     class TestStep {
         +String name
         +String? description
         +FutureOr~void~ Function() action
         +Future~void~ execute()
     }
-
     class TestFlow {
         <<abstract>>
         +String name
@@ -80,14 +44,10 @@ classDiagram
         +Fixture~dynamic~? fixture
         +Set~String~ tags
     }
-
-    class TestFlowLasting {
-    }
-
+    class TestFlowLasting
     class TestFlowTransient {
         +TODO rollback not implemented
     }
-
     class TesteadorOptions {
         +Set~String~ includeTags
         +Set~String~ excludeTags
@@ -99,7 +59,6 @@ classDiagram
         +bool showCurls
         +bool showStackTraces
     }
-
     class Testeador {
         +List~TestFlow~ flows
         +List~Actor~ actors
@@ -107,7 +66,6 @@ classDiagram
         +Future~void~ run(List~String~ args)
         -void _injectInterceptors()
     }
-
     TestFlow <|-- TestFlowLasting
     TestFlow <|-- TestFlowTransient
     TestFlow o-- Fixture
@@ -118,56 +76,26 @@ classDiagram
     Actor o-- Dio
 ```
 
----
-
 ## Fixture
 
-### Responsibility
+A `Fixture<T>` pre-establishes resources a `TestFlow` depends on. It is generic over `T`, the context object steps capture via closure at flow-construction time.
 
-A `Fixture<T>` pre-establishes resources needed for a `TestFlow`. It seeds records, opens connections, or performs any setup that the flow's steps depend on. It is generic over `T` — the context object it produces. Steps capture `T` via closure at flow-construction time.
-
-### Lifecycle
-
-```
-load() → [TestFlow steps execute] → dispose(T)
-```
-
-- **`load()`** — called once before the flow's steps run. Returns `T`.
-- **`dispose(T)`** — called once after all steps complete, whether they passed or failed. Default implementation is a no-op.
-
-### Interface
+- **`load()`** — called once before the steps run; returns `T`.
+- **`dispose(T)`** — called once after all steps, pass or fail (`finally`); default no-op, so read-only fixtures need not override it.
 
 ```dart
 abstract class Fixture<T> {
   const Fixture();
-
-  /// Loads and returns the context object needed by the flow's steps.
   Future<T> load();
-
-  /// Releases resources acquired during load(). Called even on failure.
   Future<void> dispose(T data) async {}
 }
 ```
 
-### Design rationale
-
-- **Generic `T`** keeps the context type-safe. Steps receive `T` directly via closure; no casting needed.
-- **`dispose` has a default no-op** so read-only fixtures don't need to override it.
-- **`load` returns `T`** rather than storing it internally, making the fixture stateless between runs.
-
-### Integration with TestFlow
-
-`TestFlow` holds an optional `Fixture<dynamic>`. `Testeador` calls `fixture.load()` before executing steps and `fixture.dispose(data)` in a `finally` block.
-
----
+`TestFlow` holds an optional `Fixture<dynamic>`; `Testeador` calls `load()` before the steps and `dispose(data)` in a `finally` block.
 
 ## Actor
 
-### Responsibility
-
-An `Actor` is an abstract class representing a user persona executing actions in a test flow. Subclasses provide the `Dio` instance pre-configured with base URL, auth headers, and any other interceptors. `Testeador` injects the `CurlInterceptor` into `actor.dio` before running, so all HTTP calls made through that `Dio` are recorded.
-
-### Interface
+An abstract class for a user persona. Subclasses provide a `Dio` pre-configured with base URL, auth headers, and any interceptors. `Testeador` injects the `CurlInterceptor` into `actor.dio` before running, so all calls through that `Dio` are recorded.
 
 ```dart
 abstract class Actor {
@@ -183,71 +111,23 @@ abstract class Actor {
 }
 ```
 
-### Subclassing pattern
-
-Subclass `Actor` to define a concrete actor with its own `Dio` instance:
-
-```dart
-// example/pokebattle_rest/test/actors.dart
-class FireshActor extends Actor {
-  FireshActor() : super(
-    name: 'Firesh',
-    dio: Dio(),
-  );
-}
-
-class WatershActor extends Actor {
-  WatershActor() : super(
-    name: 'Watersh',
-    dio: Dio(),
-  );
-}
-
-FireshActor firesh() => FireshActor();
-WatershActor watersh() => WatershActor();
-```
-
-Pass `actor.dio` to any repository or HTTP client so its calls are captured in the cURL log.
-
-### Registration with Testeador
-
-Pass all actors to `Testeador(actors: [...])`. Before each run, `Testeador._injectInterceptors()` adds each actor's `curlInterceptor` to their `dio.interceptors` (if not already present). The runner then clears each actor's cURL log before every flow and prints the logs on failure.
-
----
+Pass all actors to `Testeador(actors: [...])`. Before each run, `_injectInterceptors()` adds each actor's `curlInterceptor` to `dio.interceptors`; the runner clears each log before every flow and prints it on failure. Subclassing examples live in `example/pokebattle_rest/test/actors.dart`.
 
 ## TestStep
 
-### Responsibility
-
-A `TestStep` is a single named action within a `TestFlow`. Its `action` is a zero-argument async callback; actors, repositories, and shared mutable state are captured via closure at the call site.
-
-### Interface
+A single named action. `action` is a zero-argument async callback; actors, repositories, and shared mutable state are captured via closure at the call site — no generic `T` to thread through, so a step can capture multiple actors and repos naturally.
 
 ```dart
 class TestStep {
-  const TestStep({
-    required this.name,
-    required this.action,
-    this.description,
-  });
-
+  const TestStep({required this.name, required this.action, this.description});
   final String name;
   final String? description;
   final FutureOr<void> Function() action;
-
   Future<void> execute() async => action();
 }
 ```
 
-### Why no generic `T` on `TestStep`?
-
-Closure capture is used instead of a context parameter. This keeps the API simple — no type parameter to thread through — and lets steps capture multiple actors, repos, and shared state naturally.
-
----
-
 ## TestFlow
-
-### Abstract base
 
 ```dart
 abstract class TestFlow {
@@ -258,7 +138,6 @@ abstract class TestFlow {
     this.tags = const {},
     this.description,
   });
-
   final String name;
   final String? description;
   final List<TestStep> steps;
@@ -267,75 +146,27 @@ abstract class TestFlow {
 }
 ```
 
-### TestFlowLasting
+- **`TestFlowLasting`** — side effects intentionally persist (seeding, write-path tests).
+- **`TestFlowTransient`** — ⚠️ **TODO**: marker type only; rollback is not implemented and it behaves identically to `TestFlowLasting`. Candidate strategies: a transaction-scope callback on `Fixture`, or a `RollbackStrategy` pattern. Deferred pending real-world usage.
 
-Side effects intentionally persist after execution. Use for seeding data, initial configurations, or write-path tests where persistence is expected and safe.
-
-```dart
-class TestFlowLasting extends TestFlow {
-  const TestFlowLasting({
-    required super.name,
-    required super.steps,
-    super.fixture,
-    super.tags,
-    super.description,
-  });
-}
-```
-
-### TestFlowTransient
-
-> **⚠️ TODO:** Rollback is not implemented. `TestFlowTransient` is a marker type only — it behaves identically to `TestFlowLasting` at runtime. Candidate rollback approaches: (1) transaction scope callback on `Fixture`; (2) `RollbackStrategy` pattern. Decision deferred pending real-world usage data.
-
-```dart
-class TestFlowTransient extends TestFlow {
-  const TestFlowTransient({
-    required super.name,
-    required super.steps,
-    super.fixture,
-    super.tags,
-    super.description,
-  });
-}
-```
-
-### Design rationale for fixture-per-flow
-
-Each `TestFlow` holds one optional `Fixture`. This keeps flows self-contained and independently runnable — filtering by tag does not create fixture dependency problems. Multiple flows can share the same fixture instance if needed (passed by reference).
-
----
+Both share the base constructor. Each flow holds one optional `Fixture`, keeping flows self-contained and independently runnable (filtering by tag never breaks fixture dependencies). Multiple flows can share a fixture instance by reference.
 
 ## Testeador
 
-### Responsibility
+The top-level orchestrator, with two modes (both call `_injectInterceptors()` first):
 
-`Testeador` is the top-level orchestrator. It serves two modes:
-
-1. **`dart test` mode** — `registerWithDartTest([TesteadorOptions])` registers all flows as `group()`/`test()` blocks with `package:test`.
-2. **Standalone binary mode** — `run(List<String> args)` parses CLI arguments, executes flows sequentially, prints results to stdout/stderr, and calls `exit()`.
-
-In both modes, `_injectInterceptors()` is called first, adding each actor's `curlInterceptor` to their `dio.interceptors` if not already present.
-
-### Interface
+1. **`registerWithDartTest([TesteadorOptions])`** — registers flows as `group()`/`test()` blocks with `package:test`.
+2. **`run(List<String> args)`** — parses CLI args, executes flows sequentially, prints to stdout/stderr, and calls `exit()`.
 
 ```dart
 class Testeador {
-  const Testeador({
-    required this.flows,
-    this.actors = const [],
-  });
-
+  const Testeador({required this.flows, this.actors = const []});
   final List<TestFlow> flows;
   final List<Actor> actors;
-
   void registerWithDartTest([TesteadorOptions options = const TesteadorOptions()]);
   Future<void> run(List<String> args) async;
 }
-```
 
-### TesteadorOptions
-
-```dart
 class TesteadorOptions {
   const TesteadorOptions({
     this.includeTags = const {},
@@ -351,22 +182,9 @@ class TesteadorOptions {
 }
 ```
 
-### CLI flags (standalone binary mode)
+CLI flags (binary mode) are documented in [README.md](../README.md#cli-flags); they map one-to-one to `TesteadorOptions` fields.
 
-| Flag | Type | Default | Description |
-|---|---|---|---|
-| `--include-tags` | `String` (comma-separated) | — | Only run flows whose tags intersect this set |
-| `--exclude-tags` | `String` (comma-separated) | — | Skip flows whose tags intersect this set |
-| `--include-flows` | `String` (comma-separated) | — | Only run flows with these exact names |
-| `--exclude-flows` | `String` (comma-separated) | — | Skip flows with these exact names |
-| `--[no-]fail-fast` | `bool` | `true` | Stop after the first flow failure |
-| `--[no-]verbose` / `-v` | `bool` | `false` | Print step names and fixture events |
-| `--[no-]exit-on-failure` | `bool` | `true` | Call `exit(1)` when any flow fails |
-| `--[no-]show-curls` | `bool` | `true` | Print cURL log on failure |
-| `--[no-]show-stack-traces` | `bool` | `false` | Print Dart stack traces on failure |
-| `--help` / `-h` | — | — | Show usage |
-
-### Execution flow (standalone mode)
+### Execution flow — standalone (`run`)
 
 ```mermaid
 sequenceDiagram
@@ -387,12 +205,9 @@ sequenceDiagram
         loop For each TestStep
             T->>S: execute()
             S->>I: HTTP calls recorded as cURL
-            alt Step passes
-                S-->>T: ok
-            else Step throws
+            alt Step throws
                 S-->>T: error
-                T->>T: print failure message
-                T->>I: get log → print cURLs (if showCurls)
+                T->>I: print cURLs (if showCurls)
                 T->>T: failFast? break : continue
             end
         end
@@ -401,46 +216,34 @@ sequenceDiagram
     T->>CLI: exit(0) or exit(1)
 ```
 
-### Execution flow (dart test mode)
+### Execution flow — dart test (`registerWithDartTest`)
 
 ```mermaid
 sequenceDiagram
     participant DT as dart test
     participant T as Testeador
     participant G as group
-    participant S as setUpAll/tearDownAll
 
     DT->>T: registerWithDartTest(options)
-    T->>T: _injectInterceptors()
-    T->>T: filter flows by tags/names
+    T->>T: _injectInterceptors() + filter flows
     loop For each TestFlow
-        T->>G: group(flow.name)
-        G->>S: setUpAll → clearActorLogs() + fixture.load()
+        T->>G: group(flow.name, tags: flow.tags)
+        G->>G: setUpAll → clearActorLogs() + fixture.load()
         loop For each TestStep
             G->>DT: test(step.name, step.execute)
         end
-        G->>S: tearDownAll → fixture.dispose()
+        G->>G: tearDownAll → fixture.dispose()
     end
 ```
 
----
+## CurlInterceptor
 
-## Dio cURL Interceptor
-
-### Responsibility
-
-`CurlInterceptor` is a `Dio` `Interceptor` subclass that records every outgoing HTTP request as a cURL command string. On failure, `Testeador.run()` prints the accumulated log so backend developers can reproduce the exact sequence of HTTP calls.
-
-### Interface
+A `Dio` `Interceptor` subclass that records every outgoing request as a copy-pasteable cURL command. `onError` is not overridden — Dio forwards errors by default.
 
 ```dart
 class CurlInterceptor extends Interceptor {
-  CurlInterceptor({
-    this.redactHeaders = const {'authorization', 'cookie'},
-  });
-
+  CurlInterceptor({this.redactHeaders = const {'authorization', 'cookie'}});
   final Set<String> redactHeaders;
-
   List<String> get log => List.unmodifiable(_log);
   void clear() => _log.clear();
 
@@ -449,235 +252,98 @@ class CurlInterceptor extends Interceptor {
     _log.add(_toCurl(options));
     handler.next(options);
   }
-  // onError is NOT overridden — errors are forwarded by Dio's default behavior
 }
 ```
 
-### cURL generation
+Output example:
 
-`_toCurl` produces a copy-pasteable cURL command:
-
-```
+```text
 curl -X GET -H 'Content-Type: application/json' -H 'Authorization: [REDACTED]' 'https://pokeapi.co/api/v2/pokemon/charizard'
 ```
 
-**Captured:** HTTP method, full URL (including query parameters), all request headers, request body.  
-**Not captured:** Response bodies, timing information.
-
-### Header redaction
-
-Headers whose lowercase name appears in `redactHeaders` are replaced with `[REDACTED]` in the log. Default set: `{'authorization', 'cookie'}`. Pass a custom set to the `Actor` subclass constructor or directly to `CurlInterceptor(redactHeaders: {...})`.
-
----
+**Captured:** method, full URL (with query), all headers, body. **Not captured:** response bodies, timing. Headers whose lowercase name is in `redactHeaders` become `[REDACTED]` (default `{'authorization', 'cookie'}`; override per actor).
 
 ## File Structure
 
-### Library (`lib/`)
-
-```
+```text
 lib/
-├── testeador.dart              # Public barrel — exports all public symbols
+├── testeador.dart              # public barrel — exports all public symbols
 └── src/
-    ├── actor.dart              # Actor abstract class
-    ├── curl_interceptor.dart   # CurlInterceptor (Dio interceptor)
-    ├── fixture.dart            # Fixture<T> abstract class
+    ├── actor.dart              # Actor
+    ├── curl_interceptor.dart   # CurlInterceptor
+    ├── fixture.dart            # Fixture<T>
     ├── testeador.dart          # Testeador orchestrator (CLI + dart test)
-    ├── testeador_options.dart  # TesteadorOptions value class
+    ├── testeador_options.dart  # TesteadorOptions
     ├── test_flow.dart          # TestFlow + TestFlowLasting + TestFlowTransient
-    └── test_step.dart          # TestStep class
-```
+    └── test_step.dart          # TestStep
 
-### Example (`example/pokebattle_rest/`)
-
-```
 example/pokebattle_rest/
-├── pubspec.yaml                    # depends on testeador, dio
-├── bin/
-│   └── run_tests.dart              # Entry point: Testeador(...).run(args)
-├── lib/
-│   ├── data/
-│   │   └── api_client.dart         # PokeApiClient + BattleApiClient (restful-api.dev)
-│   └── domain/
-│       ├── models.dart             # Pokemon, Player, Battle
-│       └── repositories.dart       # PokemonRepository, BattleRepository
+├── bin/run_tests.dart          # entry point: Testeador(...).run(args)
+├── lib/data/api_client.dart    # PokeApiClient + BattleApiClient
+├── lib/domain/                 # models.dart, repositories.dart
 └── test/
-    ├── actors.dart                 # FireshActor, WatershActor + factory functions
-    ├── fixtures/
-    │   └── pokemon_fixture.dart    # PokemonFixture — pre-loads from PokéAPI
-    └── flows/
-        ├── fire_team_flow.dart     # Firesh registration flow
-        ├── water_team_flow.dart    # Watersh registration flow
-        └── battle_flow.dart        # Battle challenge flow
+    ├── actors.dart             # FireshActor, WatershActor + factories
+    ├── fixtures/               # PokemonFixture
+    └── flows/                  # fire_team_flow, water_team_flow, battle_flow
 ```
 
----
+(`lib/src/` also contains `mcp/`, `multidev/`, `codegen/`, and `discovery/` subtrees — see [memory-bank/05-progress.md](memory-bank/05-progress.md).)
 
-## Public API
-
-### Exported from `lib/testeador.dart`
+## Public API (from `lib/testeador.dart`)
 
 | Symbol | Kind | Purpose |
-|---|---|---|
-| `Actor` | `abstract class` | User persona — subclass to provide a configured Dio instance |
-| `CurlInterceptor` | `class` | Dio interceptor that records HTTP calls as cURL commands |
-| `Fixture<T>` | `abstract class` | Subclass to define pre-flow setup and post-flow teardown |
-| `TestStep` | `class` | A single named action within a flow |
-| `TestFlow` | `abstract class` | Base class for flows (not instantiated directly) |
-| `TestFlowLasting` | `class` | Flow whose side effects intentionally persist |
-| `TestFlowTransient` | `class` | Marker type — no rollback implemented (TODO) |
-| `Testeador` | `class` | Top-level orchestrator; `dart test` and CLI entry point |
-| `TesteadorOptions` | `class` | Immutable configuration value object |
-
----
+| --- | --- | --- |
+| `Actor` | abstract class | User persona — subclass to provide a configured Dio |
+| `CurlInterceptor` | class | Dio interceptor recording HTTP calls as cURL |
+| `Fixture<T>` | abstract class | Pre-flow setup + post-flow teardown |
+| `TestStep` | class | A single named action within a flow |
+| `TestFlow` | abstract class | Base class for flows (not instantiated directly) |
+| `TestFlowLasting` | class | Flow whose side effects persist |
+| `TestFlowTransient` | class | Marker type — no rollback (TODO) |
+| `Testeador` | class | Orchestrator; `dart test` and CLI entry point |
+| `TesteadorOptions` | class | Immutable configuration value object |
 
 ## Example Walkthrough
 
-### Scenario
+Two actors test a Pokémon battle system against two real backends, no mocks:
 
-Two actors test a Pokémon battle system against two real HTTP backends:
+- **PokéAPI** (`https://pokeapi.co/api/v2`) — read-only Pokémon data (via `PokemonFixture`).
+- **restful-api.dev** (`https://api.restful-api.dev`) — player registration and battles.
 
-- **PokéAPI** (`https://pokeapi.co/api/v2`) — read-only Pokémon data (used by `PokemonFixture`).
-- **restful-api.dev** (`https://api.restful-api.dev`) — player registration and battle challenges.
+**Firesh** manages a fire team, **Watersh** a water team. Three `TestFlowLasting` flows run in sequence: `buildFireTeamFlow()` (Firesh registers and verifies her listing), `buildWaterTeamFlow()` (Watersh registers, verifies herself, confirms Firesh is visible), `buildBattleFlow()` (Firesh challenges; Watersh confirms she sees the opponent). The entry point wires them into `Testeador(flows: [...], actors: [firesh, watersh]).run(args)`.
 
-No mocks are used. All HTTP calls go to real APIs.
+The full source is the canonical reference — read it under [`example/pokebattle_rest/`](../example/pokebattle_rest/) (`test/actors.dart`, `test/flows/*.dart`, `bin/run_tests.dart`). Run:
 
-Actors:
-- **Firesh** — manages a fire-type team (Charizard, Arcanine, Flareon, Rapidash, Magmar, Ninetales).
-- **Watersh** — manages a water-type team (Blastoise, Vaporeon, Gyarados, Starmie, Lapras, Cloyster).
-
-### Step 1 — Actors (`example/pokebattle_rest/test/actors.dart`)
-
-```dart
-import 'package:dio/dio.dart';
-import 'package:testeador/testeador.dart';
-
-class FireshActor extends Actor {
-  FireshActor() : super(name: 'Firesh', dio: Dio());
-}
-
-class WatershActor extends Actor {
-  WatershActor() : super(name: 'Watersh', dio: Dio());
-}
-
-FireshActor firesh() => FireshActor();
-WatershActor watersh() => WatershActor();
+```bash
+dart run example/pokebattle_rest/bin/run_tests.dart --include-tags smoke --verbose
 ```
-
-### Step 2 — Flows
-
-Three flows run in sequence:
-
-**`buildFireTeamFlow()`** — Firesh registers with her 6 fire Pokémon on restful-api.dev and verifies she appears in the player list.
-
-**`buildWaterTeamFlow()`** — Watersh registers with her 6 water Pokémon, verifies her own listing, and confirms Firesh is visible.
-
-**`buildBattleFlow()`** — Firesh selects 3 Pokémon and issues a battle challenge; Watersh views it and confirms she sees who she fights and with what Pokémon.
-
-```dart
-// example/pokebattle_rest/test/flows/fire_team_flow.dart
-TestFlowLasting buildFireTeamFlow() {
-  final actor = firesh();
-  final battleRepo = BattleRepository(actor.dio); // actor.dio captures cURLs
-
-  final firePokemonNames = ['charizard', 'arcanine', 'flareon',
-                            'rapidash', 'magmar', 'ninetales'];
-
-  return TestFlowLasting(
-    name: 'Firesh — registers fire team',
-    tags: {'fire', 'registration', 'smoke'},
-    steps: [
-      TestStep(
-        name: 'Firesh registers with her 6 fire Pokémon',
-        action: () async {
-          final player = await battleRepo.registerPlayer(
-            actorName: actor.name,
-            pokemonNames: firePokemonNames,
-          );
-          expect(player.name, equals('Firesh'));
-          expect(player.pokemonNames, hasLength(6));
-        },
-      ),
-      TestStep(
-        name: 'Firesh can see herself in the player list',
-        action: () async {
-          final players = await battleRepo.listPlayers();
-          expect(players.where((p) => p.name == 'Firesh'), isNotEmpty);
-        },
-      ),
-    ],
-  );
-}
-```
-
-### Step 3 — Entry point (`example/pokebattle_rest/bin/run_tests.dart`)
-
-```dart
-import 'package:testeador/testeador.dart';
-import '../test/actors.dart';
-import '../test/flows/fire_team_flow.dart';
-import '../test/flows/water_team_flow.dart';
-import '../test/flows/battle_flow.dart';
-
-Future<void> main(List<String> args) async {
-  final fireshActor = firesh();
-  final watershActor = watersh();
-
-  await Testeador(
-    flows: [
-      buildFireTeamFlow(),
-      buildWaterTeamFlow(),
-      buildBattleFlow(),
-    ],
-    actors: [fireshActor, watershActor],
-  ).run(args);
-}
-```
-
-Run: `dart run example/pokebattle_rest/bin/run_tests.dart --include-tags smoke --verbose`
-
-Compile: `dart compile exe example/pokebattle_rest/bin/run_tests.dart -o bin/test_runner`
-
----
 
 ## Key Design Decisions
 
 | Decision | Choice | Rationale |
-|---|---|---|
-| Context passing to steps | Closure capture | No generic type parameter on `TestStep`; simpler API; natural Dart idiom |
-| `Actor` is abstract | Subclasses provide the `Dio` instance; `Testeador` injects `CurlInterceptor` | Different systems need different auth mechanisms; the actor owns its Dio configuration, `Testeador` owns the observability layer |
-| Actor model | `Actor` holds `Dio` + `CurlInterceptor` | Each actor has an independent HTTP log; multi-user scenarios are first-class |
-| Fixture scope | One optional `Fixture` per `TestFlow` | Self-contained flows; independent filtering; simpler lifecycle |
-| cURL log | Per-actor, cleared before each flow | Accurate attribution; no cross-flow noise |
-| `TestFlowTransient` rollback | TODO stub | Deferred; real-world usage needed to pick the right strategy |
-| Dual execution mode | `registerWithDartTest()` + `run(args)` | Works with `dart test` AND as a compiled binary without Dart SDK |
-| HTTP client | `Dio` | Interceptor API enables `CurlInterceptor`; richer request options |
-| Header redaction | Opt-out (default: redact `authorization`, `cookie`) | Safer default for CI logs |
-| `actors` on `Testeador` | Separate from `flows` | Actors are created outside flows in the entry point; runner manages their log lifecycle |
-| No mocks | All HTTP calls go to real APIs | In-memory fakes cannot catch contract regressions; integration tests must exercise the real backend |
-
----
-
-## Dependency Rationale
-
-| Dependency | Why | Could it be removed? |
 | --- | --- | --- |
-| `dio` | HTTP client with interceptor API (enables `CurlInterceptor`) | No; core to the design |
-| `args` | CLI argument parsing | Possible, but reinventing the wheel; good library |
-| `test` | Framework for `registerWithDartTest()` integration | No; hard dependency for this mode |
-| `mocktail` (dev) | Mock framework for testeador's own unit tests | Yes, but useful internally; kept for dev convenience |
-| `very_good_analysis` (dev) | Linting; ensures code quality | No; dev-only; improves maintainability |
+| Context passing to steps | Closure capture | No generic on `TestStep`; simpler API; natural Dart idiom |
+| `Actor` is abstract | Subclass provides `Dio`; `Testeador` injects `CurlInterceptor` | Each system has its own auth; actor owns config, runner owns observability |
+| Actor model | `Actor` holds `Dio` + `CurlInterceptor` | Independent HTTP log per actor; multi-user scenarios are first-class |
+| Fixture scope | One optional `Fixture` per `TestFlow` | Self-contained flows; independent filtering; simple lifecycle |
+| cURL log | Per-actor, cleared before each flow | Accurate attribution; no cross-flow noise |
+| `TestFlowTransient` rollback | TODO stub | Deferred; real usage needed to pick the strategy |
+| Dual execution mode | `registerWithDartTest()` + `run(args)` | Works with `dart test` AND as a compiled binary without the SDK |
+| HTTP client | `Dio` | Interceptor API enables `CurlInterceptor` |
+| Header redaction | Opt-out (default `authorization`, `cookie`) | Safer default for CI logs |
+| No mocks | All HTTP calls to real APIs | In-memory fakes cannot catch contract regressions |
 
-Dependencies are pinned to ranges (`^X.Y.Z`): bug fixes and minor versions allowed, breaking changes prevented. `analyzer` is at 13+ (pulled in by `source_gen 4.x` for the codegen pipeline), which in turn requires `meta 1.18+` — this conflicts with `flutter_test` (pinned to `meta 1.17`), so Flutter sub-packages must resolve outside `resolution: workspace` or wait for the Flutter SDK to catch up.
+## Glossary
 
-## Environment Constraints
-
-- **Network access:** Tests must reach real APIs (staging, sandbox, or public). Firewall rules must allow outbound HTTP/HTTPS.
-- **API availability:** If an external API (e.g., PokéAPI) is down, tests fail. Use staging/sandbox APIs under your control in production CI.
-- **Dart SDK:** `^3.11.0` or later. The compiled binary has no SDK dependency.
-- **OS:** Linux, macOS, Windows (tested on macOS; other platforms assumed compatible).
-
-## Known Build/Runtime Issues
-
-1. **`dart compile exe` binary size.** On macOS, AOT binaries can be 100+ MB — normal for Dart. Strip with `strip bin/test_runner` if size matters.
-2. **Cross-platform compilation.** `dart compile exe` targets the host platform only. To target another OS, compile on that OS.
-3. **TLS/SSL certificates.** On some CI systems, TLS verification may fail for self-signed certs. Configure `Dio`'s `httpClientAdapter` to relax verification where appropriate.
+- **Actor** — abstract class for a user persona; subclasses provide a named `Dio` with base URL, auth, etc.
+- **CurlInterceptor** — `Dio` interceptor recording outgoing requests as copy-pasteable cURL commands.
+- **Fixture\<T\>** — abstract generic for setup/teardown; `load()` runs before steps, `dispose(T)` after (even on failure).
+- **TestStep** — a single named action; zero-argument async callback capturing context via closure.
+- **TestFlow** — abstract base for a named, ordered sequence of steps, with an optional fixture and tags.
+- **TestFlowLasting** — flow whose side effects intentionally persist (seeding, write-path).
+- **TestFlowTransient** — marker for read-only flows; rollback is TODO, currently behaves as Lasting.
+- **Testeador** — orchestrator; runs flows sequentially via `registerWithDartTest()` or `run(args)`.
+- **Contract test** — integration test validating the HTTP contract (shapes, field names, status codes) between a backend and its consumers.
+- **Sequential execution** — flows and steps run one after another, in declaration order; no concurrency within a flow.
+- **No mocks** — all HTTP calls go to real APIs (staging, sandbox, public); in-memory fakes are not supported.
+- **Closure capture** — `TestStep.action` captures actors, repos, and shared state from the enclosing scope when the step is defined.

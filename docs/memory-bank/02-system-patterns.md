@@ -1,20 +1,18 @@
-# System Patterns & Architecture Summary
+# System Patterns
 
-**Update this file when:** Major design decisions change, or new architectural patterns emerge.
+*Update when: major design decisions change or new patterns emerge.*
 
----
+Abstraction stack: `Testeador` (orchestrator) → `TestFlow` (sequential `TestStep`s + optional `Fixture<T>`) → `Actor` (persona) → `CurlInterceptor` (HTTP observability).
 
-Stack de abstracciones: `Testeador` (orquestador) → `TestFlow` (pasos secuenciales) →
-`TestStep` + `Fixture<T>`; `Actor` (persona) → `CurlInterceptor` (observabilidad HTTP).
+Key principles (rules-at-a-glance — full rationale, interfaces, and diagrams in [architecture.md](../architecture.md)):
 
-Invariantes no-negociables (detalle y diagramas en
-[`docs/architecture.md`](../architecture.md) §Class Hierarchy / §Execution flow /
-§Key Design Decisions):
+- **Sequential execution only** — steps run in declaration order; no concurrency.
+- **No mocks** — all HTTP to real APIs; non-negotiable.
+- **Closure capture** — `TestStep.action` is zero-argument; context captured from scope.
+- **Per-actor cURL logs** — each `Actor` has its own `CurlInterceptor`; logs cleared per flow, printed on failure.
+- **Fixture lifecycle** — one optional `Fixture` per flow; `load()` before steps, `dispose()` in `finally`.
+- **Lasting vs. Transient** — `TestFlowLasting` persists; `TestFlowTransient` is a marker (rollback TODO).
+- **Dual execution** — `registerWithDartTest()` (dart test) and `run(args)` (CLI binary); both inject interceptors first.
+- **Filtering** — by tags and flow names via CLI flags / `TesteadorOptions`.
 
-- **Ejecución secuencial** dentro de un flow, en orden de declaración. Sin concurrencia.
-- **Sin mocks**: todo HTTP va a APIs reales (staging/sandbox/públicas).
-- **Closure capture**: `TestStep.action` es zero-arg; actores/repos/estado se capturan del scope.
-- **Un log HTTP por actor**: cada `Actor` tiene su `CurlInterceptor`, impreso por separado al fallar.
-- **Una `Fixture<T>` opcional por flow**: `load()` antes, `dispose()` en `finally`.
-- **`TestFlowLasting` vs `TestFlowTransient`**: Transient es marker (rollback TODO; hoy se comporta como Lasting).
-- **Doble modo de ejecución**: `registerWithDartTest()` (package:test) y `run(args)` (binario CLI).
+Open TODOs: `TestFlowTransient` rollback (strategy TBD); no built-in latency assertions; no auto contract-doc generation. See [05-progress.md](05-progress.md) for status.

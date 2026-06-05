@@ -1,15 +1,7 @@
 # Product Context: Why Testeador Exists
 
-**Update this file when:** Problem statement, user needs, or value proposition changes.
+*Update when: problem statement, user needs, or value proposition changes.*
 
----
+Frontend contract tests normally run only in frontend CI, so a backend change can break the contract silently until production. Rewriting the tests with backend tooling defines the contract twice; the copies drift. Mocks hide breaks entirely. Testeador's answer: define the contract once (in the frontend's tests) and run it unchanged in backend CI against real APIs.
 
-El frontend escribe tests que definen los contratos de la API, pero solo corren en su
-propio CI. Si el backend rompe el contrato, la falla es silenciosa y reactiva: se
-descubre tarde (CI del frontend o producción). Testeador hace que esos mismos tests
-corran en el CI del backend, con una única fuente de verdad y **sin mocks** (los mocks
-ocultan rupturas reales).
-
-- **Problema, personas, value proposition, goals:** [`docs/PRD.md`](../PRD.md).
-- **Narrativa del problema (con diagramas):** [`docs/PROBLEM.md`](../PROBLEM.md).
-- **Pains de producto que motivan la evolución:** [`roadmap.md`](../../roadmap.md).
+Users and their success conditions, value proposition, and goals are documented canonically in [PRD.md](../PRD.md) (§Target Users, §Goals). Full problem narrative with diagrams: [PROBLEM.md](../PROBLEM.md). Roadmap pains 2–4: [roadmap.md](../../roadmap.md).
