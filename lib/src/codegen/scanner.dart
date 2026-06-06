@@ -2,6 +2,7 @@ import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:testeador/src/contract/endpoint_id.dart';
 
 /// Static descriptor of a `test()` call found in a `*_test.dart` source.
 ///
@@ -14,6 +15,7 @@ class DiscoveredTest {
     required this.name,
     required this.groupChain,
     required this.tags,
+    this.coveredEndpoints,
   });
 
   /// Literal first argument passed to `test('...')`.
@@ -25,6 +27,16 @@ class DiscoveredTest {
   /// Values from the `tags:` parameter, as accepted by `package:test`
   /// (`String`, `List<String>`, or `Set<String>` literals).
   final Set<String> tags;
+
+  /// Backend endpoints this test covers, used as the baseline for the
+  /// contract-coverage diff.
+  ///
+  /// The scanner cannot know this statically (Dio URLs are built at runtime),
+  /// so it stays `null` here and is populated later by annotation/backfill.
+  /// The distinction is load-bearing: `null` means *not annotated yet* (a
+  /// cold-start, which downstream tooling warns about), whereas an empty list
+  /// means *annotated and genuinely covers no endpoint*.
+  final List<EndpointId>? coveredEndpoints;
 }
 
 /// Result of [scanTestSource]: the discovered tests plus any non-fatal

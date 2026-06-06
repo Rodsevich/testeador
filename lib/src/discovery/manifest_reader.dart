@@ -15,7 +15,16 @@ import 'package:testeador/src/codegen/aggregator.dart';
 /// (same comparator the aggregator uses internally), so any downstream
 /// `IdentifierNamer` invocation produces identifiers that match the codegen
 /// output verbatim.
-Future<List<FileManifest>> readAllManifests(Directory packageRoot) async {
+///
+/// When [onColdStart] is provided, it is invoked once per test whose
+/// `coveredEndpoints` is `null` — i.e. a test that has never been annotated
+/// with the endpoints it covers. The coverage diff treats these as a
+/// cold-start (no baseline) rather than as "covers nothing", so callers can
+/// surface a warning instead of silently reporting every endpoint as missing.
+Future<List<FileManifest>> readAllManifests(
+  Directory packageRoot, {
+  void Function(String message)? onColdStart,
+}) async {
   final root = packageRoot.absolute;
   final seen = <String>{};
   final manifests = <FileManifest>[];
@@ -51,6 +60,20 @@ Future<List<FileManifest>> readAllManifests(Directory packageRoot) async {
     if (byPkg != 0) return byPkg;
     return a.sourceRelativePath.compareTo(b.sourceRelativePath);
   });
+
+  if (onColdStart != null) {
+    for (final manifest in manifests) {
+      for (final test in manifest.tests) {
+        if (test.coveredEndpoints == null) {
+          onColdStart(
+            '${manifest.packageName}:${manifest.sourceRelativePath} → '
+            '"${test.name}" has no endpoint-coverage annotation (cold-start).',
+          );
+        }
+      }
+    }
+  }
+
   return manifests;
 }
 

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:testeador/src/codegen/identifier_naming.dart';
 import 'package:testeador/src/codegen/registry.dart';
 import 'package:testeador/src/codegen/scanner.dart';
+import 'package:testeador/src/contract/endpoint_id.dart';
 
 /// Per-`*_test.dart` manifest produced by the per-package capture builder
 /// and read back by the aggregator.
@@ -30,6 +31,7 @@ class FileManifest {
               name: t['name'] as String,
               groupChain: (t['groupChain'] as List).cast<String>(),
               tags: (t['tags'] as List).cast<String>().toSet(),
+              coveredEndpoints: _coveredEndpointsFromJson(t),
             ),
           )
           .toList(),
@@ -63,15 +65,7 @@ class FileManifest {
     'sourceRelativePath': sourceRelativePath,
     'transformedImport': transformedImport,
     'entryPointName': entryPointName,
-    'tests': tests
-        .map(
-          (t) => {
-            'name': t.name,
-            'groupChain': t.groupChain,
-            'tags': t.tags.toList(),
-          },
-        )
-        .toList(),
+    'tests': tests.map(_testToJson).toList(),
   };
 
   /// Convenience: serializes [manifests] as a single JSON document (one
@@ -82,11 +76,10 @@ class FileManifest {
       ).convert(manifests.map((m) => m.toJson()).toList());
 
   /// Inverse of [encodeAll].
-  static List<FileManifest> decodeAll(String json) =>
-      (jsonDecode(json) as List)
-          .cast<Map<String, dynamic>>()
-          .map(FileManifest.fromJson)
-          .toList();
+  static List<FileManifest> decodeAll(String json) => (jsonDecode(json) as List)
+      .cast<Map<String, dynamic>>()
+      .map(FileManifest.fromJson)
+      .toList();
 }
 
 /// Result of [generateTestInjector].
@@ -283,3 +276,31 @@ String _dartString(String raw) =>
     raw.replaceAll(r'\', r'\\').replaceAll("'", r"\'");
 
 String _dartDoc(String raw) => raw.replaceAll('`', r'\`');
+
+/// Serializes a single test entry. `coveredEndpoints` is omitted entirely when
+/// `null` so that *un-annotated* (absent) and *annotated-but-empty* (`[]`)
+/// survive the round-trip as distinct states.
+Map<String, dynamic> _testToJson(DiscoveredTest t) {
+  final json = <String, dynamic>{
+    'name': t.name,
+    'groupChain': t.groupChain,
+    'tags': t.tags.toList(),
+  };
+  final covered = t.coveredEndpoints;
+  if (covered != null) {
+    json['coveredEndpoints'] = covered.map((e) => e.toJson()).toList();
+  }
+  return json;
+}
+
+/// Inverse of [_testToJson] for the `coveredEndpoints` field: an absent or
+/// `null` value hydrates to `null` (cold-start); a present list (even empty)
+/// hydrates to that list.
+List<EndpointId>? _coveredEndpointsFromJson(Map<String, dynamic> test) {
+  final raw = test['coveredEndpoints'];
+  if (raw == null) return null;
+  return (raw as List)
+      .cast<Map<String, dynamic>>()
+      .map(EndpointId.fromJson)
+      .toList();
+}

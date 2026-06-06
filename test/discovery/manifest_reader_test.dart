@@ -22,8 +22,7 @@ void main() {
       expect(manifests, isEmpty);
     });
 
-    test('reads every *.testeador.manifest.json in the root package',
-        () async {
+    test('reads every *.testeador.manifest.json in the root package', () async {
       _writeManifest(tmp, 'a_test', _sample('pkg_a', 'test/a_test.dart'));
       _writeManifest(tmp, 'b_test', _sample('pkg_a', 'test/b_test.dart'));
 
@@ -40,12 +39,14 @@ void main() {
 
       final depDir = Directory(p.join(tmp.path, 'deps', 'leaf'))
         ..createSync(recursive: true);
-      _writeManifest(depDir, 'leaf_test', _sample('leaf', 'test/leaf_test.dart'));
+      _writeManifest(
+        depDir,
+        'leaf_test',
+        _sample('leaf', 'test/leaf_test.dart'),
+      );
 
-      final configDir = Directory(p.join(tmp.path, '.dart_tool'))
-        ..createSync();
-      File(p.join(configDir.path, 'package_config.json'))
-          .writeAsStringSync(
+      final configDir = Directory(p.join(tmp.path, '.dart_tool'))..createSync();
+      File(p.join(configDir.path, 'package_config.json')).writeAsStringSync(
         jsonEncode({
           'configVersion': 2,
           'packages': [
@@ -66,6 +67,36 @@ void main() {
       );
     });
 
+    test('resolves absolute file:// rootUri entries', () async {
+      _writeManifest(tmp, 'root_test', _sample('root', 'test/root_test.dart'));
+
+      final depDir = Directory(p.join(tmp.path, 'external', 'leaf'))
+        ..createSync(recursive: true);
+      _writeManifest(
+        depDir,
+        'leaf_test',
+        _sample('leaf', 'test/leaf_test.dart'),
+      );
+
+      final configDir = Directory(p.join(tmp.path, '.dart_tool'))..createSync();
+      File(p.join(configDir.path, 'package_config.json')).writeAsStringSync(
+        jsonEncode({
+          'configVersion': 2,
+          'packages': [
+            {'name': 'root', 'rootUri': '..', 'packageUri': 'lib/'},
+            {
+              'name': 'leaf',
+              'rootUri': depDir.absolute.uri.toString(),
+              'packageUri': 'lib/',
+            },
+          ],
+        }),
+      );
+
+      final manifests = await readAllManifests(tmp);
+      expect(manifests.map((m) => m.packageName).toSet(), {'root', 'leaf'});
+    });
+
     test('sorts by package then source path', () async {
       _writeManifest(
         tmp,
@@ -84,28 +115,59 @@ void main() {
         ['alpha', 'zeta'],
       );
     });
+
+    test('invokes onColdStart per test lacking endpoint coverage', () async {
+      _writeManifest(tmp, 'a_test', _sample('pkg_a', 'test/a_test.dart'));
+
+      final warnings = <String>[];
+      await readAllManifests(tmp, onColdStart: warnings.add);
+
+      expect(warnings, hasLength(1));
+      expect(warnings.single, contains('cold-start'));
+      expect(warnings.single, contains('"sample"'));
+    });
+
+    test('does not warn when coverage is annotated, even if empty', () async {
+      _writeManifest(tmp, 'a_test', {
+        ..._sample('pkg_a', 'test/a_test.dart'),
+        'tests': [
+          {
+            'name': 'sample',
+            'groupChain': <String>[],
+            'tags': <String>[],
+            'coveredEndpoints': <Map<String, Object?>>[],
+          },
+        ],
+      });
+
+      final warnings = <String>[];
+      await readAllManifests(tmp, onColdStart: warnings.add);
+
+      expect(warnings, isEmpty);
+    });
   });
 }
 
 Map<String, Object?> _sample(String pkg, String src) => {
-      'packageName': pkg,
-      'sourceRelativePath': src,
-      'transformedImport':
-          'package:$pkg/src/_testeador/${p.basenameWithoutExtension(src)}'
-              '.testeador.dart',
-      'entryPointName': r'_testeadorCapture$dummy',
-      'tests': [
-        {
-          'name': 'sample',
-          'groupChain': <String>[],
-          'tags': <String>[],
-        },
-      ],
-    };
+  'packageName': pkg,
+  'sourceRelativePath': src,
+  'transformedImport':
+      'package:$pkg/src/_testeador/${p.basenameWithoutExtension(src)}'
+      '.testeador.dart',
+  'entryPointName': r'_testeadorCapture$dummy',
+  'tests': [
+    {
+      'name': 'sample',
+      'groupChain': <String>[],
+      'tags': <String>[],
+    },
+  ],
+};
 
 void _writeManifest(Directory pkgRoot, String basename, Object payload) {
   final dir = Directory(p.join(pkgRoot.path, 'lib', 'src', '_testeador'))
     ..createSync(recursive: true);
-  File(p.join(dir.path, '$basename.testeador.manifest.json'))
-      .writeAsStringSync(jsonEncode(payload));
+  File(
+    p.join(dir.path, '$basename.testeador.manifest.json'),
+  ).writeAsStringSync(jsonEncode(payload));
 }
