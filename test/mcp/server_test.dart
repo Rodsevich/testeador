@@ -22,6 +22,18 @@ void main() {
       final server = buildServer(workspace: ws, enableMultidev: false);
       expect(server, isNotNull);
     });
+
+    test('wires the capture tools without throwing when enabled', () {
+      final ws = WorkspaceConfig.resolve(
+        environment: {'TESTEADOR_PROJECT_ROOT': Directory.current.path},
+      );
+      final server = buildServer(
+        workspace: ws,
+        enableMultidev: false,
+        enableCapture: true,
+      );
+      expect(server, isNotNull);
+    });
   });
 
   group('WorkspaceConfig.resolve', () {

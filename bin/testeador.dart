@@ -1,11 +1,13 @@
 import 'dart:io';
 
+import 'package:testeador/src/capture/record_cli.dart';
 import 'package:testeador/src/discovery/cli.dart';
 import 'package:testeador/src/mcp/server.dart';
 
 const _version = '0.3.0';
 
-const _usage = '''
+const _usage =
+    '''
 testeador $_version
 
 Usage: dart run testeador <command> [options]
@@ -14,6 +16,8 @@ Usage: dart run testeador <command> [options]
 Commands:
   mcp        Run the Model Context Protocol server over stdio.
   discover   List captured tests and (optionally) scaffold a TestFlow.
+  record     Capture a running app's HTTP traffic and draft the missing
+             contract tests (--backend web|native).
 
 Top-level flags:
   --version, -V   Print the testeador version and exit.
@@ -42,6 +46,9 @@ Future<void> main(List<String> args) async {
       return;
     case 'discover':
       exitCode = await runDiscoverCli(rest);
+      return;
+    case 'record':
+      exitCode = await runRecordCli(rest);
       return;
     default:
       stderr

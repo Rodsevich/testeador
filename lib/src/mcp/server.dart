@@ -15,15 +15,26 @@ const _version = '0.1.0';
 McpServer buildServer({
   WorkspaceConfig? workspace,
   bool? enableMultidev,
+  bool? enableCapture,
 }) {
   final ws = workspace ?? WorkspaceConfig.resolve();
-  final multidev = enableMultidev ??
+  final multidev =
+      enableMultidev ??
       (Platform.environment['TESTEADOR_MCP_ENABLE_MULTIDEV'] == '1');
+  final capture =
+      enableCapture ??
+      (Platform.environment['TESTEADOR_MCP_ENABLE_CAPTURE'] == '1');
 
   stderr
     ..writeln('[testeador mcp] Project root: ${ws.root.path}')
-    ..writeln('[testeador mcp] Multidev tools: '
-        '${multidev ? 'enabled' : 'disabled'}');
+    ..writeln(
+      '[testeador mcp] Multidev tools: '
+      '${multidev ? 'enabled' : 'disabled'}',
+    )
+    ..writeln(
+      '[testeador mcp] Capture tools: '
+      '${capture ? 'enabled' : 'disabled'}',
+    );
 
   final server = McpServer(
     const Implementation(name: _name, version: _version),
@@ -36,7 +47,12 @@ McpServer buildServer({
     ),
   );
 
-  registerTools(server: server, workspace: ws, enableMultidev: multidev);
+  registerTools(
+    server: server,
+    workspace: ws,
+    enableMultidev: multidev,
+    enableCapture: capture,
+  );
   registerResources(server: server, workspace: ws);
   registerPrompts(server: server);
 
@@ -89,5 +105,8 @@ Environment:
   TESTEADOR_MCP_ENABLE_MULTIDEV   Set to 1 to enable the multidev tools
                                   (list_devices, boot_fleet, snapshot_fleet,
                                   run_patrol_fleet). Requires adb/xcrun.
+  TESTEADOR_MCP_ENABLE_CAPTURE    Set to 1 to enable the capture tools
+                                  (start_recording, stop_and_generate).
+                                  Attaches to a running app's debug transport.
 ''');
 }

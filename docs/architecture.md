@@ -287,7 +287,17 @@ example/pokebattle_rest/
     └── flows/                  # fire_team_flow, water_team_flow, battle_flow
 ```
 
-(`lib/src/` also contains `mcp/`, `multidev/`, `codegen/`, and `discovery/` subtrees — see [memory-bank/05-progress.md](memory-bank/05-progress.md).)
+(`lib/src/` also contains `mcp/`, `multidev/`, `codegen/`, `discovery/`, `contract/`, and `capture/` subtrees — see [memory-bank/05-progress.md](memory-bank/05-progress.md).)
+
+## Contract discovery from real traffic (`capture/`)
+
+`capture/` finds *missing* contract tests by passively recording the HTTP a running app makes while it is exercised (human or AI-driven), then diffing the exercised endpoints against existing coverage and drafting the gaps. The UI is only the means; generated artifacts are pure-HTTP and carry no `capture`/`vm_service`/marionette dependency at runtime.
+
+- **`EndpointId`** (`contract/endpoint_id.dart`) — the shared identity `(method, templatedPath, service)`; numeric/UUID/long-hex segments template to `{id}`. The *same* normalizer reduces both the exercised and the covered sets, so the diff is meaningful. Lives in `contract/` as a dependency-free leaf (both `codegen/` and `capture/` depend on it; never the reverse).
+- **`CapturedExchange` + `TrafficCapture`** — the normalized request/response model and the `open`/`takeExchanges`/`close` interface. `open` enables profiling *before* the journey; capture is passive. Two backends: `CdpNetworkCapture` (web, Chrome DevTools Protocol; `CdpExchangeAssembler` holds the pure event-correlation logic) and `VmServiceHttpCapture` (native, VM-service HTTP profiler; `mapVmHttpExchange` is the pure field mapper). In-flight/missing bodies and non-HTTP channels (WebSocket/SSE) are recorded as partial/out-of-scope, never silently dropped.
+- **`GapAnalysis`** — `exercised − covered`, grouped by service; one seed per endpoint (prefer the last 2xx, which also collapses `401 → refresh → retry`); cold-start (no baseline) surfaces every endpoint as a candidate with a warning flag.
+- **`SecretRedactor`** — strips secrets from the *generated source* (header values + `*token*`/`*secret*`/`*password*`/`*apikey*` body fields; non-JSON bodies dropped). No literal secret ever reaches a committed test.
+- **`TestUnitEmitter` + `RecordingSession`** — emit one draft `TestStep` builder per gap (testeador-only imports, `Actor` as a parameter, conservative status + key-presence assertions) and bracket the whole flow. Surface: `testeador record` (CLI) and the gated MCP tools `start_recording`/`stop_and_generate` (`TESTEADOR_MCP_ENABLE_CAPTURE=1`); both share `RecordingSession`. Coverage annotation of the codegen manifest (`coveredEndpoints`, currently always `null` → cold-start) is the baseline-population step still to be wired.
 
 ## Public API (from `lib/testeador.dart`)
 

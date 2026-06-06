@@ -38,6 +38,12 @@
 - **Codegen:** capture shim for `package:test`, AST scanner, source transformer, identifier namer, aggregator emitting `lib/test_injector.g.dart` (`byName`/`byTags`/`byRegExp`); builders in `build.yaml`. 8/8 pipeline tests; E2E in `inject_demo/` (9/9) and `pokebattle_serverpod_server` (8/8).
 - **Discover:** `dart run testeador discover` (text/JSON, filters, `--pick`, emits a flow entrypoint) + MCP `discover_tests` (subprocess wrapper); discovery lib walks `package_config.json` manifests; shared `safeWrite`. 16/16 tests; E2E pick 2 → `dart test` 2/2 green.
 
+### Contract discovery from real traffic (`contract/`, `capture/`)
+
+- **EndpointId** (`contract/`): shared `(method, templatedPath, service)` identity, numeric/UUID/long-hex → `{id}`; same normalizer for both sides of the diff. Manifest `DiscoveredTest.coveredEndpoints` (nullable: `null` = un-annotated/cold-start vs `[]` = covers nothing) round-trips; `readAllManifests(onColdStart:)` warns per un-annotated test.
+- **Capture** (`capture/`): `CapturedExchange` + `TrafficCapture`; web backend `CdpNetworkCapture` (CDP Network; pure `CdpExchangeAssembler`) and native `VmServiceHttpCapture` (VM-service HTTP profiler; pure `mapVmHttpExchange`). Partial/in-flight bodies and WS/SSE recorded, not dropped; zero-capture hard-warns (native-adapter hint).
+- **Gap + generate**: `GapAnalysis` (exercised − covered, last-2xx seed, 401-retry collapse, cold-start), `SecretRedactor` (no literal secret in generated source), `TestUnitEmitter` (draft `TestStep` builder per gap), `GapReport`, `RecordingSession`. Surface: `testeador record` CLI + gated MCP `start_recording`/`stop_and_generate` (`TESTEADOR_MCP_ENABLE_CAPTURE=1`). Validated end-to-end by a capture spike (CDP + VM profiler both capture req+resp bodies). 50 capture/contract unit tests; transports are spike-validated (no live-browser/VM unit test). **Pending:** populating `coveredEndpoints` (annotation/backfill) to move past cold-start.
+
 ### Docs
 
 - README (usage/CLI/MCP), architecture.md (spec + diagrams + glossary), PROBLEM.md (Spanish narrative), roadmap.md, PRD.md, example READMEs.

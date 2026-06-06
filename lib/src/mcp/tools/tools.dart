@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:mcp_dart/mcp_dart.dart';
+import 'package:testeador/src/mcp/tools/capture_tools.dart';
 import 'package:testeador/src/mcp/tools/discovery_tools.dart';
 import 'package:testeador/src/mcp/tools/execution_tools.dart';
 import 'package:testeador/src/mcp/tools/introspection_tools.dart';
@@ -10,8 +11,9 @@ import 'package:testeador/src/mcp/workspace.dart';
 
 /// Wraps [data] into a successful `CallToolResult` carrying pretty JSON.
 CallToolResult okResult(Object data) {
-  final text =
-      data is String ? data : const JsonEncoder.withIndent('  ').convert(data);
+  final text = data is String
+      ? data
+      : const JsonEncoder.withIndent('  ').convert(data);
   return CallToolResult.fromContent([TextContent(text: text)]);
 }
 
@@ -28,6 +30,7 @@ void registerTools({
   required McpServer server,
   required WorkspaceConfig workspace,
   required bool enableMultidev,
+  bool enableCapture = false,
 }) {
   registerIntrospectionTools(server: server, workspace: workspace);
   registerExecutionTools(server: server, workspace: workspace);
@@ -35,5 +38,8 @@ void registerTools({
   registerDiscoveryTools(server: server, workspace: workspace);
   if (enableMultidev) {
     registerMultidevTools(server: server, workspace: workspace);
+  }
+  if (enableCapture) {
+    registerCaptureTools(server: server, workspace: workspace);
   }
 }

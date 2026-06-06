@@ -192,8 +192,24 @@ Tool groups:
 - **Execution** — `run_suite_cli`, `run_suite_dart_test`, `compile_suite_exe` (each accepts `execute: false` for command-only; cURL logs and pass/fail counts are parsed out).
 - **Scaffolding** — `scaffold_actor`, `scaffold_fixture`, `scaffold_flow`, `scaffold_suite_runner`, `scaffold_dart_test_main` (each accepts `dry_run: true`).
 - **Multidev** — `list_devices`, `boot_fleet`, `shutdown_fleet`, `snapshot_fleet`, `run_patrol_fleet` (gated behind `TESTEADOR_MCP_ENABLE_MULTIDEV=1`; require `adb`/`xcrun` for mobile). A **web** device drives a Flutter web app in real Chrome via Patrol 4.0+ (Playwright) and doubles as a headless-Chrome evidence surface for `snapshot_fleet`. Web e2e needs Node + `patrol_cli` 4.x (`dart pub global activate patrol_cli`); first run auto-installs Playwright.
+- **Capture** — `start_recording`, `stop_and_generate` (gated behind `TESTEADOR_MCP_ENABLE_CAPTURE=1`). See [Discover contract tests from a running app](#discover-contract-tests-from-a-running-app-record).
 
 It also serves scaffolding templates and project docs as MCP **resources** (`testeador://templates/*`, `testeador://docs/*`) and two **prompts** (`scaffold_suite`, `diagnose_failure`).
+
+## Discover contract tests from a running app (`record`)
+
+`testeador record` (CLI) and the `start_recording`/`stop_and_generate` MCP tools find **which backend contract tests are missing** by passively capturing the HTTP traffic a real app generates while you exercise it — a human tapping, or an AI driving via [`marionette_flutter`](https://pub.dev/packages/marionette_flutter). The UI is the *means*; the deliverable is pure-HTTP contract tests that run in CI with no capture dependency.
+
+Two backends behind one passive capture: **web** via the Chrome DevTools Protocol Network domain, **native** via the Dart VM-service HTTP profiler (Dio/`package:http` over `dart:io`; apps using a native adapter like `cronet_http` bypass it and are reported as zero-capture). Exercised endpoints are templated (`/users/123` → `/users/{id}`), diffed against coverage, and the gaps become draft `TestStep` builders — **secrets redacted** (auth/cookie/api-key headers and `*token*`/`*password*`/`*secret*` body fields never reach the generated source).
+
+```bash
+# Web: attach to a Chrome started with --remote-debugging-port=9222
+testeador record --backend web --debug-port 9222 --out test/contract_drafts
+# Native: attach to a `flutter run` VM-service URI
+testeador record --backend native --vm-uri ws://127.0.0.1:8181/ws --duration 30
+```
+
+Drafts are written without overwriting; refine them and wire each to the actor whose `Dio` targets that service, then pull them into a flow with `testeador discover --pick`.
 
 ## Example
 
