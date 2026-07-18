@@ -5,6 +5,7 @@ import 'package:testeador/src/mcp/tools/capture_tools.dart';
 import 'package:testeador/src/mcp/tools/discovery_tools.dart';
 import 'package:testeador/src/mcp/tools/execution_tools.dart';
 import 'package:testeador/src/mcp/tools/introspection_tools.dart';
+import 'package:testeador/src/mcp/tools/live_tools.dart';
 import 'package:testeador/src/mcp/tools/multidev_tools.dart';
 import 'package:testeador/src/mcp/tools/scaffold_tools.dart';
 import 'package:testeador/src/mcp/workspace.dart';
@@ -31,6 +32,7 @@ void registerTools({
   required WorkspaceConfig workspace,
   required bool enableMultidev,
   bool enableCapture = false,
+  bool enableLive = false,
 }) {
   registerIntrospectionTools(server: server, workspace: workspace);
   registerExecutionTools(server: server, workspace: workspace);
@@ -41,5 +43,8 @@ void registerTools({
   }
   if (enableCapture) {
     registerCaptureTools(server: server, workspace: workspace);
+  }
+  if (enableLive) {
+    registerLiveTools(server: server, workspace: workspace);
   }
 }

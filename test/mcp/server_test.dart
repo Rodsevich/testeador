@@ -34,6 +34,18 @@ void main() {
       );
       expect(server, isNotNull);
     });
+
+    test('wires the live-persona tools without throwing when enabled', () {
+      final ws = WorkspaceConfig.resolve(
+        environment: {'TESTEADOR_PROJECT_ROOT': Directory.current.path},
+      );
+      final server = buildServer(
+        workspace: ws,
+        enableMultidev: false,
+        enableLive: true,
+      );
+      expect(server, isNotNull);
+    });
   });
 
   group('WorkspaceConfig.resolve', () {

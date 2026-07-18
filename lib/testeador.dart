@@ -4,6 +4,8 @@ library;
 export 'src/actor.dart';
 export 'src/curl_interceptor.dart';
 export 'src/fixture.dart';
+export 'src/live/questline_live_client.dart';
+export 'src/live/questline_scenario.dart';
 export 'src/multidev/device_fleet.dart';
 export 'src/multidev/flutter_actor.dart';
 export 'src/multidev/patrol_runner.dart';

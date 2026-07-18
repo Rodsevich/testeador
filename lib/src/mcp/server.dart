@@ -16,6 +16,7 @@ McpServer buildServer({
   WorkspaceConfig? workspace,
   bool? enableMultidev,
   bool? enableCapture,
+  bool? enableLive,
 }) {
   final ws = workspace ?? WorkspaceConfig.resolve();
   final multidev =
@@ -24,6 +25,8 @@ McpServer buildServer({
   final capture =
       enableCapture ??
       (Platform.environment['TESTEADOR_MCP_ENABLE_CAPTURE'] == '1');
+  final live =
+      enableLive ?? (Platform.environment['TESTEADOR_MCP_ENABLE_LIVE'] == '1');
 
   stderr
     ..writeln('[testeador mcp] Project root: ${ws.root.path}')
@@ -34,6 +37,10 @@ McpServer buildServer({
     ..writeln(
       '[testeador mcp] Capture tools: '
       '${capture ? 'enabled' : 'disabled'}',
+    )
+    ..writeln(
+      '[testeador mcp] Live-persona tools: '
+      '${live ? 'enabled' : 'disabled'}',
     );
 
   final server = McpServer(
@@ -52,6 +59,7 @@ McpServer buildServer({
     workspace: ws,
     enableMultidev: multidev,
     enableCapture: capture,
+    enableLive: live,
   );
   registerResources(server: server, workspace: ws);
   registerPrompts(server: server);
@@ -108,5 +116,9 @@ Environment:
   TESTEADOR_MCP_ENABLE_CAPTURE    Set to 1 to enable the capture tools
                                   (start_recording, stop_and_generate).
                                   Attaches to a running app's debug transport.
+  TESTEADOR_MCP_ENABLE_LIVE       Set to 1 to enable the live-persona tools
+                                  (boot_persona, list_personas). Attaches to a
+                                  running dev app's VM service and invokes its
+                                  ext.stabilitas.* service extensions.
 ''');
 }

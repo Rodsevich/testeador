@@ -8,6 +8,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Live-persona seeding — `boot_persona` / `list_personas` MCP tools + a
+  DevTools extension.** Boot a running **dev** Flutter app already seeded into a
+  persona (an `Actor`+`Fixture`) by invoking its `ext.stabilitas.*` service
+  extensions over the VM service (`LivePersonaClient` in
+  [`lib/src/live/live_persona.dart`](lib/src/live/live_persona.dart)), with
+  extension discovery + an actionable timeout. Gated behind
+  `TESTEADOR_MCP_ENABLE_LIVE=1`. A companion Flutter-web **DevTools extension**
+  ([`extension/devtools_app/`](extension/devtools_app/), built into
+  [`extension/devtools/`](extension/devtools/)) lists the personas and seeds the
+  chosen one from a VS Code panel.
 - **`WebDevice` — a driven web target for the multi-device fleet.** A
   `TargetDevice` subtype for Flutter web apps that serves two roles:
   - **Driven e2e (Patrol-web).** `TargetDevice` gained `patrolDeviceId`
