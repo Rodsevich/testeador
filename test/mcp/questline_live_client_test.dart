@@ -153,4 +153,30 @@ void main() {
     expect(generic.steps.last.extension, 'ext.dev_mate.clock.force');
     expect(generic.restoreSteps.single.extension, 'ext.dev_mate.clock.clear');
   });
+
+  test('toScenario con clockIso usa el param iso', () {
+    // El puente deprecado es exactamente lo que se testea acá.
+    // ignore: deprecated_member_use_from_same_package
+    const scenario = QuestlineScenario(name: 'x', clockIso: '2026-07-01T06:00');
+    final generic = scenario.toScenario();
+    expect(generic.steps.single.args, <String, String>{
+      'iso': '2026-07-01T06:00',
+    });
+  });
+
+  test(
+    'toScenario con SOLO liturgicalHour documenta la asimetría: sin step de '
+    'reloj (el label se resuelve app-side) pero con restore del clear',
+    () {
+      // El puente deprecado es exactamente lo que se testea acá.
+      // ignore: deprecated_member_use_from_same_package
+      const scenario = QuestlineScenario(name: 'x', liturgicalHour: 'sexta');
+      final generic = scenario.toScenario();
+      expect(generic.steps, isEmpty);
+      expect(
+        generic.restoreSteps.single.extension,
+        'ext.dev_mate.clock.clear',
+      );
+    },
+  );
 }

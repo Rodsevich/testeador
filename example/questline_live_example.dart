@@ -7,6 +7,10 @@
 //
 // The fixture pins the clock to Sexta and seeds a Sunday-novice state before
 // the steps run, and restores the prior state afterwards.
+//
+// QuestlineScenario está deprecado (puente hacia el Scenario genérico de
+// dev_mate vía toScenario()); este ejemplo documenta justamente ese puente.
+// ignore_for_file: deprecated_member_use_from_same_package
 import 'package:testeador/testeador.dart';
 
 Future<void> main(List<String> args) async {
