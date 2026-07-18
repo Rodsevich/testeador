@@ -1,3 +1,9 @@
+// QuestlineScenario sigue siendo el vocabulario de las suites existentes
+// mientras dura la transición a dev_mate's Scenario (ver toScenario()).
+// ignore_for_file: deprecated_member_use_from_same_package
+
+import 'package:dev_mate_client/dev_mate_client.dart'
+    show Scenario, ScenarioStep;
 import 'package:testeador/src/fixture.dart';
 import 'package:testeador/src/live/questline_live_client.dart';
 import 'package:testeador/src/test_step.dart';
@@ -9,8 +15,17 @@ import 'package:testeador/src/test_step.dart';
 ///
 /// Scenarios are plain data so they can be reused across flows and fixtures.
 /// {@endtemplate}
+// La deprecación es deliberada en 0.x: marca el puente de la transición.
+// ignore: remove_deprecations_in_breaking_versions
+@Deprecated(
+  'Usá el Scenario genérico de dev_mate (pasos {extension, args} '
+  'cross-dominio + restoreSteps explícitos); este tipo queda como puente — '
+  'convertí con toScenario().',
+)
 class QuestlineScenario {
   /// {@macro questline_scenario}
+  // ignore: remove_deprecations_in_breaking_versions
+  @Deprecated('Convertí con toScenario() hacia el Scenario de dev_mate.')
   const QuestlineScenario({
     this.name = 'scenario',
     this.signals = const <String, Object?>{},
@@ -26,8 +41,9 @@ class QuestlineScenario {
   /// client can infer the contract `type` (bool/int/double/string/null).
   final Map<String, Object?> signals;
 
-  /// Liturgical hour name to force the clock to (see
-  /// [QuestlineLiveClient.liturgicalHours]).
+  /// Liturgical hour label to force the clock to, resolved against the
+  /// app's clock presets in the dev_mate catalog (see
+  /// [QuestlineLiveClient.forceLiturgicalHour]).
   final String? liturgicalHour;
 
   /// Raw minute-of-day (0..1439) to force the clock to.
@@ -68,6 +84,45 @@ class QuestlineScenario {
       'unlockedOpusKalendarium': true,
     },
   );
+
+  /// Bridge to dev_mate's generic [Scenario]: signals become
+  /// `ext.questline.setSignal` steps and the clock override becomes an
+  /// `ext.dev_mate.clock.force` step. Restore is honest-and-explicit: only
+  /// the clock is cleared (a signal write has no derivable inverse — restore
+  /// them via the prior `dumpState`, as [QuestlineActor] does).
+  ///
+  /// Note: `liturgicalHour` labels resolve app-side; prefer `clockMinutes`/
+  /// `clockIso` here (a pure-data scenario cannot read the catalog).
+  Scenario toScenario() => Scenario(
+    name: name,
+    description: 'puente desde QuestlineScenario',
+    steps: <ScenarioStep>[
+      for (final entry in signals.entries)
+        ScenarioStep('ext.questline.setSignal', <String, String>{
+          'key': entry.key,
+          'value': entry.value?.toString() ?? '',
+          'type': switch (entry.value) {
+            null => 'null',
+            bool _ => 'bool',
+            int _ => 'int',
+            double _ => 'double',
+            _ => 'string',
+          },
+        }),
+      if (clockMinutes != null)
+        ScenarioStep('ext.dev_mate.clock.force', <String, String>{
+          'minutes': '$clockMinutes',
+        })
+      else if (clockIso != null)
+        ScenarioStep('ext.dev_mate.clock.force', <String, String>{
+          'iso': clockIso!,
+        }),
+    ],
+    restoreSteps: <ScenarioStep>[
+      if (clockMinutes != null || clockIso != null || liturgicalHour != null)
+        const ScenarioStep('ext.dev_mate.clock.clear'),
+    ],
+  );
 }
 
 /// {@template questline_actor}
@@ -85,7 +140,7 @@ class QuestlineActor {
 
   /// Convenience: builds an actor with a fresh client for the app at [wsUri].
   QuestlineActor.forApp(String wsUri, {this.name = 'questline'})
-      : client = QuestlineLiveClient(wsUri: wsUri);
+    : client = QuestlineLiveClient(wsUri: wsUri);
 
   /// Human-readable name for this driver (used in output).
   final String name;
@@ -118,7 +173,7 @@ class QuestlineActor {
   ) async {
     final signals =
         (prior['signals'] as Map?)?.cast<String, dynamic>() ??
-            const <String, dynamic>{};
+        const <String, dynamic>{};
     for (final key in scenario.signals.keys) {
       final entry = signals[key];
       if (entry is Map && entry['value'] != null) {
@@ -186,11 +241,10 @@ TestStep setSignalStep(
   String key,
   Object? value, {
   String? type,
-}) =>
-    TestStep(
-      name: 'set signal $key=$value',
-      action: () => client.setSignal(key, value, type: type),
-    );
+}) => TestStep(
+  name: 'set signal $key=$value',
+  action: () => client.setSignal(key, value, type: type),
+);
 
 /// A step that forces the clock to liturgical hour [liturgicalHour]
 /// (e.g. `'sexta'`).
@@ -202,9 +256,9 @@ TestStep forceHourStep(QuestlineLiveClient client, String liturgicalHour) =>
 
 /// A step that releases a forced clock.
 TestStep clearClockStep(QuestlineLiveClient client) => TestStep(
-      name: 'clear forced clock',
-      action: client.clearClock,
-    );
+  name: 'clear forced clock',
+  action: client.clearClock,
+);
 
 /// A step that reads the runtime state and fails (throws [StateError]) unless
 /// signal [key] equals [expected] (compared as strings).
@@ -212,19 +266,18 @@ TestStep assertSignalStep(
   QuestlineLiveClient client,
   String key,
   Object? expected,
-) =>
-    TestStep(
-      name: 'assert signal $key==$expected',
-      action: () async {
-        final state = await client.dumpState();
-        final signals = (state['signals'] as Map?)?.cast<String, dynamic>();
-        final entry = signals?[key];
-        final actual = entry is Map ? entry['value'] : null;
-        final want = expected?.toString();
-        if (actual?.toString() != want) {
-          throw StateError(
-            "Signal '$key' is '$actual', expected '$want'.",
-          );
-        }
-      },
-    );
+) => TestStep(
+  name: 'assert signal $key==$expected',
+  action: () async {
+    final state = await client.dumpState();
+    final signals = (state['signals'] as Map?)?.cast<String, dynamic>();
+    final entry = signals?[key];
+    final actual = entry is Map ? entry['value'] : null;
+    final want = expected?.toString();
+    if (actual?.toString() != want) {
+      throw StateError(
+        "Signal '$key' is '$actual', expected '$want'.",
+      );
+    }
+  },
+);

@@ -33,7 +33,8 @@ testeador — running 1 flow(s)
     });
 
     test('handles a trailing block with no blank line after it', () {
-      const output = 'cURL log for actor "Solo":\n'
+      const output =
+          'cURL log for actor "Solo":\n'
           "    curl -X GET 'https://x'";
       final logs = parseCurlLogs(output);
       expect(logs, hasLength(1));

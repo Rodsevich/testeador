@@ -1,9 +1,0 @@
-# Config de la DevTools extension de testeador (siembra en vivo de personas).
-# El bundle compilado va en ./build (generado por `build_and_copy`).
-name: testeador
-issueTracker: https://github.com/Rodsevich/testeador/issues
-version: 0.0.1
-# Icons.people
-materialIconCodePoint: '0xe7fb'
-# Requiere una app conectada (invoca sus service extensions ext.stabilitas.*).
-requiresConnection: true

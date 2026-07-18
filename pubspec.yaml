@@ -20,6 +20,10 @@ dependencies:
   analyzer: ^13.0.0
   args: ^2.4.0
   build: ^4.0.6
+  # dev_mate: transporte VM + tools MCP genéricas de federación (aún sin
+  # publicar: resueltos por los dependency_overrides de abajo).
+  dev_mate_client: ^0.1.0
+  dev_mate_mcp: ^0.1.0
   dio: ^5.0.0
   glob: ^2.1.0
   image: ^4.5.0
@@ -29,7 +33,17 @@ dependencies:
   path: ^1.9.0
   source_gen: ^4.2.3
   test: ^1.30.0
+  # Solo para la captura de tráfico (vm_service_capture.dart); el transporte
+  # live migró a dev_mate_client.
   vm_service: ^15.0.0
+
+dependency_overrides:
+  dev_mate:
+    path: ../packages/dev_mate/packages/dev_mate
+  dev_mate_client:
+    path: ../packages/dev_mate/packages/dev_mate_client
+  dev_mate_mcp:
+    path: ../packages/dev_mate/packages/dev_mate_mcp
 
 dev_dependencies:
   build_runner: ^2.4.0

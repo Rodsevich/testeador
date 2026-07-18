@@ -1,91 +1,72 @@
-import 'dart:async';
+import 'package:dev_mate_client/dev_mate_client.dart';
 
-import 'package:testeador/src/live/live_persona.dart';
-
-/// Host client that live-configures the **questline runtime** of a running
-/// Flutter app (signals, liturgical clock, mission/unlock state) by invoking
-/// its `ext.questline.*` service extensions over the VM service.
+/// Host client that live-configures a running app's questline runtime and
+/// forceable clock: thin shim over [DevMateClient] keeping the historical
+/// typed API used by flows, steps and tools.
 ///
-/// It reuses the same [PersonaVmBackend] abstraction as [LivePersonaClient]
-/// (no vm_service re-implementation) and the same discovery-with-timeout, so a
-/// dev app that has not registered the extensions yet fails with an actionable
-/// error instead of hanging.
-///
-/// The extension contract (fixed, implemented by `QuestlineDevtools`): params
-/// are always strings, the response lives in the extension's JSON body.
-/// - [dumpStateExt] → `{targets, signals:{key:{value,type}}, clock}`
-/// - [setSignalExt] `{key,value,type}` → `{signals}`
-/// - [forceClockExt] `{minutes}` | `{iso}` | `{millis}` → `{clock}`
-/// - [clearClockExt] → `{clock}`
+/// Since the dev_mate consolidation the CLOCK is not questline's anymore:
+/// `forceHour`/`clearClock` talk to dev_mate's built-in `clock` domain
+/// (`ext.dev_mate.clock.*`), and the liturgical-hour names are read from the
+/// app's own presets in the catalog (label → minutes) instead of a local
+/// hardcoded map — the truth lives app-side.
 class QuestlineLiveClient {
-  /// Creates a client against the VM service at [wsUri]. [connect] is injected
-  /// in tests to avoid needing a real VM.
+  /// Creates a client against the VM service at [wsUri]. `connect` is
+  /// injected in tests (`FakeVmBackend`) to avoid a real VM.
   QuestlineLiveClient({
     required this.wsUri,
-    Future<PersonaVmBackend> Function(String wsUri)? connect,
-  }) : _connect = connect ?? VmServicePersonaBackend.connect;
+    Future<VmBackend> Function(String wsUri)? connect,
+  }) : _client = DevMateClient(wsUri: wsUri, connect: connect);
 
   /// ws:// URI of the running app's VM service / DDS.
   final String wsUri;
 
-  final Future<PersonaVmBackend> Function(String wsUri) _connect;
+  final DevMateClient _client;
 
-  /// Dumps the whole questline runtime state.
+  /// Dumps the questline runtime state.
   static const String dumpStateExt = 'ext.questline.dumpState';
 
   /// Sets a single signal.
   static const String setSignalExt = 'ext.questline.setSignal';
 
-  /// Pins / forces the liturgical clock.
-  static const String forceClockExt = 'ext.questline.forceClock';
+  /// Pins the app's forceable clock (dev_mate built-in domain).
+  static const String forceClockExt = 'ext.dev_mate.clock.force';
 
   /// Releases a forced clock back to real time.
-  static const String clearClockExt = 'ext.questline.clearClock';
+  static const String clearClockExt = 'ext.dev_mate.clock.clear';
 
-  /// Start minute-of-day of each liturgical window, keyed by name.
-  ///
-  /// Both the accentless and accented spellings of *vísperas* are accepted;
-  /// lookups are case-insensitive (see [forceLiturgicalHour]).
-  static const Map<String, int> liturgicalHours = <String, int>{
-    'vigiliae': 0,
-    'laudes': 300,
-    'tercia': 480,
-    'sexta': 660,
-    'nona': 840,
-    'visperas': 1020,
-    'vísperas': 1020,
-    'completas': 1200,
-  };
-
-  /// Default seconds to wait for the extension to be registered.
+  /// Default seconds to wait for an extension to be registered.
   static const Duration defaultTimeout = Duration(seconds: 15);
 
-  /// Returns the full runtime state: `{targets, signals, clock}`.
-  Future<Map<String, dynamic>> dumpState({Duration timeout = defaultTimeout}) =>
-      _withExtension(dumpStateExt, timeout, const <String, dynamic>{});
+  /// Returns the questline runtime state: `{targets, signals}`.
+  Future<Map<String, dynamic>> dumpState({
+    Duration timeout = defaultTimeout,
+  }) async => (await _client.invoke(
+    dumpStateExt,
+    const <String, Object?>{},
+    timeout: timeout,
+  )).body;
 
   /// Sets signal [key] to [value].
   ///
   /// [type] is one of `bool|int|double|string|null`; when omitted it is
-  /// inferred from the runtime type of [value]. [value] is serialized to a
-  /// string as the contract requires.
+  /// inferred from the runtime type of [value] (host-side sugar — the wire
+  /// always carries strings).
   Future<Map<String, dynamic>> setSignal(
     String key,
     Object? value, {
     String? type,
     Duration timeout = defaultTimeout,
-  }) =>
-      _withExtension(setSignalExt, timeout, <String, dynamic>{
-        'key': key,
-        'value': value?.toString() ?? '',
-        'type': type ?? _inferType(value),
-      });
+  }) async => (await _client.invoke(setSignalExt, <String, Object?>{
+    'key': key,
+    'value': value?.toString() ?? '',
+    'type': type ?? _inferType(value),
+  }, timeout: timeout)).body;
 
   /// Forces the clock to [minutes] past midnight (0..1439).
   Future<Map<String, dynamic>> forceHour(
     int minutes, {
     Duration timeout = defaultTimeout,
-  }) {
+  }) async {
     if (minutes < 0 || minutes > 1439) {
       throw ArgumentError.value(
         minutes,
@@ -93,40 +74,85 @@ class QuestlineLiveClient {
         'Must be 0..1439 (minute of day)',
       );
     }
-    return _withExtension(forceClockExt, timeout, <String, dynamic>{
-      'minutes': '$minutes',
-    });
+    return (await _client.invoke(forceClockExt, <String, Object?>{
+      'minutes': minutes,
+    }, timeout: timeout)).body;
   }
 
   /// Forces the clock to the instant described by ISO-8601 [iso].
   Future<Map<String, dynamic>> forceClockIso(
     String iso, {
     Duration timeout = defaultTimeout,
-  }) =>
-      _withExtension(forceClockExt, timeout, <String, dynamic>{'iso': iso});
+  }) async => (await _client.invoke(forceClockExt, <String, Object?>{
+    'iso': iso,
+  }, timeout: timeout)).body;
 
-  /// Forces the clock to the start of liturgical hour [name]
-  /// (see [liturgicalHours]). Throws [ArgumentError] on an unknown name.
+  /// Forces the clock to the start of liturgical hour [name], resolving the
+  /// label against the app's clock presets in the dev_mate catalog. Throws
+  /// [ArgumentError] on an unknown label.
   Future<Map<String, dynamic>> forceLiturgicalHour(
     String name, {
     Duration timeout = defaultTimeout,
-  }) {
-    final minutes = liturgicalHours[name.trim().toLowerCase()];
-    if (minutes == null) {
+  }) async {
+    final presets = await _clockPresets(timeout: timeout);
+    final wanted = _fold(name);
+    final match = presets.entries
+        .where((e) => _fold(e.key) == wanted)
+        .map((e) => e.value)
+        .firstOrNull;
+    if (match == null) {
       throw ArgumentError.value(
         name,
         'name',
-        'Unknown liturgical hour. Known: ${liturgicalHours.keys.join(', ')}',
+        'Unknown liturgical hour. App presets: ${presets.keys.join(', ')}',
       );
     }
-    return forceHour(minutes, timeout: timeout);
+    return forceHour(int.parse(match), timeout: timeout);
   }
 
   /// Releases a forced clock, returning to real time.
   Future<Map<String, dynamic>> clearClock({
     Duration timeout = defaultTimeout,
-  }) =>
-      _withExtension(clearClockExt, timeout, const <String, dynamic>{});
+  }) async => (await _client.invoke(
+    clearClockExt,
+    const <String, Object?>{},
+    timeout: timeout,
+  )).body;
+
+  /// label → wire value of the `minutes` presets of the app's clock domain.
+  Future<Map<String, String>> _clockPresets({
+    required Duration timeout,
+  }) async {
+    final catalog = await _client.discover(timeout: timeout);
+    final domains = (catalog['domains'] as List?) ?? const <Object?>[];
+    for (final domain in domains.whereType<Map<String, dynamic>>()) {
+      if (domain['name'] != 'clock') continue;
+      final actions = (domain['actions'] as List?) ?? const <Object?>[];
+      for (final action in actions.whereType<Map<String, dynamic>>()) {
+        if (action['name'] != 'force') continue;
+        final params = (action['params'] as List?) ?? const <Object?>[];
+        for (final param in params.whereType<Map<String, dynamic>>()) {
+          if (param['name'] != 'minutes') continue;
+          final enums = (param['enumValues'] as List?) ?? const <Object?>[];
+          return <String, String>{
+            for (final e in enums.whereType<Map<String, dynamic>>())
+              '${e['label']}': '${e['value']}',
+          };
+        }
+      }
+    }
+    return const <String, String>{};
+  }
+
+  /// Case/accent-insensitive label folding (vísperas == visperas).
+  static String _fold(String s) => s
+      .trim()
+      .toLowerCase()
+      .replaceAll('á', 'a')
+      .replaceAll('é', 'e')
+      .replaceAll('í', 'i')
+      .replaceAll('ó', 'o')
+      .replaceAll('ú', 'u');
 
   static String _inferType(Object? value) {
     if (value == null) return 'null';
@@ -134,29 +160,5 @@ class QuestlineLiveClient {
     if (value is int) return 'int';
     if (value is double) return 'double';
     return 'string';
-  }
-
-  // ponytail: one VM connection per call (mirrors LivePersonaClient). Fine for
-  // dev/test cadence; batch onto a persistent backend if it ever gets chatty.
-  Future<Map<String, dynamic>> _withExtension(
-    String ext,
-    Duration timeout,
-    Map<String, dynamic> args,
-  ) async {
-    final backend = await _connect(wsUri);
-    try {
-      final isolateId = await backend.mainIsolateId();
-      await awaitExtension(
-        backend,
-        isolateId,
-        ext,
-        timeout,
-        notRunningHint: '¿La app dev (con QuestlineDevtools) está corriendo y '
-            'conectada a este VM service?',
-      );
-      return await backend.call(ext, isolateId, args);
-    } finally {
-      await backend.dispose();
-    }
   }
 }

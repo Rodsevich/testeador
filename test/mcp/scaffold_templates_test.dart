@@ -16,7 +16,8 @@ void expectParses(String source, {required String label}) {
   expect(
     result.errors,
     isEmpty,
-    reason: 'Rendered "$label" template has syntax errors:\n'
+    reason:
+        'Rendered "$label" template has syntax errors:\n'
         '${result.errors.join('\n')}\n\n--- source ---\n$source',
   );
 }
@@ -89,7 +90,8 @@ void main() {
         'flow_description': 'Buyer completes a checkout.',
         'tags': "'smoke', 'e2e'",
         'actors_block': 'final buyer = BuyerActor();',
-        'steps_block': 'TestStep(\n'
+        'steps_block':
+            'TestStep(\n'
             "        name: 'first step',\n"
             '        action: () async {},\n'
             '      ),',
@@ -104,7 +106,8 @@ void main() {
         'flow_description': 'Buyer reads data.',
         'tags': "'regression'",
         'actors_block': 'final buyer = BuyerActor();',
-        'steps_block': 'TestStep(\n'
+        'steps_block':
+            'TestStep(\n'
             "        name: 'first step',\n"
             '        action: () async {},\n'
             '      ),',

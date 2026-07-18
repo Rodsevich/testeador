@@ -1,261 +1,156 @@
 import 'dart:async';
 
+import 'package:dev_mate_client/dev_mate_client.dart';
 import 'package:test/test.dart';
-import 'package:testeador/src/live/live_persona.dart';
 import 'package:testeador/src/live/questline_live_client.dart';
 import 'package:testeador/src/live/questline_scenario.dart';
 
-/// Fake backend: the `ext.questline.*` extensions "appear" after
-/// [registerAfter] polls; [result] is returned by every `call`.
-class _FakeBackend implements PersonaVmBackend {
-  _FakeBackend({
-    this.registerAfter = 0,
-    this.result = const <String, dynamic>{},
-  });
+/// Catálogo con los presets litúrgicos que publicaría la app (D8): la verdad
+/// del mapa label→minutos vive app-side; el cliente la lee de acá.
+const _catalog = <String, dynamic>{
+  'version': 1,
+  'domains': <Object?>[
+    <String, dynamic>{
+      'name': 'clock',
+      'prefix': 'dev_mate.clock',
+      'actions': <Object?>[
+        <String, dynamic>{
+          'name': 'force',
+          'extension': 'ext.dev_mate.clock.force',
+          'params': <Object?>[
+            <String, dynamic>{
+              'name': 'minutes',
+              'enumValues': <Object?>[
+                <String, dynamic>{'label': 'sexta', 'value': '660'},
+                <String, dynamic>{'label': 'vísperas', 'value': '1020'},
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
 
-  final int registerAfter;
-  final Map<String, dynamic> result;
-
-  int _polls = 0;
-  bool disposed = false;
-  final List<({String method, Map<String, dynamic> args})> calls =
-      <({String method, Map<String, dynamic> args})>[];
-
-  @override
-  Future<String> mainIsolateId() async => 'iso-1';
-
-  @override
-  Future<Set<String>> extensionRPCs(String isolateId) async {
-    final n = _polls++;
-    if (n < registerAfter) return <String>{};
-    return <String>{
+void main() {
+  FakeVmBackend backend({
+    Map<String, dynamic> result = const <String, dynamic>{},
+  }) => FakeVmBackend(
+    extensions: const <String>{
+      DevMateClient.catalogExtension,
       QuestlineLiveClient.dumpStateExt,
       QuestlineLiveClient.setSignalExt,
       QuestlineLiveClient.forceClockExt,
       QuestlineLiveClient.clearClockExt,
-    };
-  }
+    },
+    onCall: (method, _) =>
+        method == DevMateClient.catalogExtension ? _catalog : result,
+  );
 
-  @override
-  Future<Map<String, dynamic>> call(
-    String method,
-    String isolateId,
-    Map<String, dynamic> args,
-  ) async {
-    calls.add((method: method, args: args));
-    return result;
-  }
+  QuestlineLiveClient clientWith(FakeVmBackend b) =>
+      QuestlineLiveClient(wsUri: 'ws://localhost/ws', connect: (_) async => b);
 
-  @override
-  Future<void> dispose() async => disposed = true;
-}
+  test('setSignal serializa el valor e infiere el type', () async {
+    final b = backend();
+    await clientWith(b).setSignal('unlockedVita', true);
+    expect(b.calls.first.method, QuestlineLiveClient.setSignalExt);
+    expect(b.calls.first.args, <String, dynamic>{
+      'key': 'unlockedVita',
+      'value': 'true',
+      'type': 'bool',
+    });
+  });
 
-void main() {
-  QuestlineLiveClient clientWith(_FakeBackend backend) => QuestlineLiveClient(
+  test(
+    'forceHour valida el rango y pega al dominio clock de dev_mate',
+    () async {
+      final b = backend();
+      await clientWith(b).forceHour(660);
+      expect(b.calls.first.method, 'ext.dev_mate.clock.force');
+      expect(b.calls.first.args, <String, dynamic>{'minutes': '660'});
+
+      expect(() => clientWith(backend()).forceHour(1500), throwsArgumentError);
+    },
+  );
+
+  test(
+    'forceLiturgicalHour resuelve el label desde los presets del catálogo '
+    '(sin mapa local)',
+    () async {
+      final b = backend();
+      await clientWith(b).forceLiturgicalHour('  Sexta ');
+      final force = b.calls.singleWhere(
+        (c) => c.method == 'ext.dev_mate.clock.force',
+      );
+      expect(force.args, <String, dynamic>{'minutes': '660'});
+    },
+  );
+
+  test('forceLiturgicalHour matchea labels con acento (visperas)', () async {
+    final b = backend();
+    await clientWith(b).forceLiturgicalHour('visperas');
+    final force = b.calls.singleWhere(
+      (c) => c.method == 'ext.dev_mate.clock.force',
+    );
+    expect(force.args, <String, dynamic>{'minutes': '1020'});
+  });
+
+  test('forceLiturgicalHour con label desconocido es accionable', () async {
+    await expectLater(
+      clientWith(backend()).forceLiturgicalHour('maitines'),
+      throwsA(
+        isA<ArgumentError>().having(
+          (e) => '${e.message}',
+          'message',
+          contains('sexta'),
+        ),
+      ),
+    );
+  });
+
+  test('clearClock pega al dominio clock y dumpState al questline', () async {
+    final b = backend();
+    final client = clientWith(b);
+    // invoke() agrega una consulta final al catálogo (marca inCatalog):
+    // comparar contra la última llamada NO-catálogo.
+    String lastAction() => b.calls
+        .lastWhere((c) => c.method != DevMateClient.catalogExtension)
+        .method;
+    await client.clearClock();
+    expect(lastAction(), 'ext.dev_mate.clock.clear');
+    await client.dumpState();
+    expect(lastAction(), 'ext.questline.dumpState');
+  });
+
+  test('timeout accionable si la app no expone las extensions', () async {
+    final b = FakeVmBackend(registerAfter: 1 << 30);
+    await expectLater(
+      QuestlineLiveClient(
         wsUri: 'ws://localhost/ws',
-        connect: (_) async => backend,
-      );
-
-  group('QuestlineLiveClient', () {
-    test('dumpState invokes the extension with no args and returns body',
-        () async {
-      final backend = _FakeBackend(
-        result: <String, dynamic>{
-          'signals': <String, dynamic>{'feria': 3},
-        },
-      );
-      final res = await clientWith(backend).dumpState();
-
-      expect(backend.calls.single.method, QuestlineLiveClient.dumpStateExt);
-      expect(backend.calls.single.args, isEmpty);
-      expect(res['signals'], <String, dynamic>{'feria': 3});
-      expect(backend.disposed, isTrue);
-    });
-
-    test('setSignal infers type and serializes value to string', () async {
-      final backend = _FakeBackend();
-      final client = clientWith(backend);
-
-      await client.setSignal('feria', 1);
-      await client.setSignal('unlockedOpusVita', true);
-      await client.setSignal('label', 'hi');
-      await client.setSignal('none', null);
-
-      expect(backend.calls[0].method, QuestlineLiveClient.setSignalExt);
-      expect(backend.calls[0].args,
-          <String, dynamic>{'key': 'feria', 'value': '1', 'type': 'int'});
-      expect(backend.calls[1].args, <String, dynamic>{
-        'key': 'unlockedOpusVita',
-        'value': 'true',
-        'type': 'bool',
-      });
-      expect(backend.calls[2].args,
-          <String, dynamic>{'key': 'label', 'value': 'hi', 'type': 'string'});
-      expect(backend.calls[3].args,
-          <String, dynamic>{'key': 'none', 'value': '', 'type': 'null'});
-    });
-
-    test('setSignal honors an explicit type', () async {
-      final backend = _FakeBackend();
-      await clientWith(backend).setSignal('x', '2', type: 'double');
-      expect(backend.calls.single.args['type'], 'double');
-    });
-
-    test('forceHour sends minutes as a string', () async {
-      final backend = _FakeBackend();
-      await clientWith(backend).forceHour(660);
-      expect(backend.calls.single.method, QuestlineLiveClient.forceClockExt);
-      expect(backend.calls.single.args, <String, dynamic>{'minutes': '660'});
-    });
-
-    test('forceHour rejects out-of-range minutes', () {
-      final client = clientWith(_FakeBackend());
-      expect(() => client.forceHour(-1), throwsArgumentError);
-      expect(() => client.forceHour(1440), throwsArgumentError);
-    });
-
-    test('forceClockIso sends the iso arg', () async {
-      final backend = _FakeBackend();
-      await clientWith(backend).forceClockIso('2026-07-17T12:00:00Z');
-      expect(backend.calls.single.args,
-          <String, dynamic>{'iso': '2026-07-17T12:00:00Z'});
-    });
-
-    test('forceLiturgicalHour maps names to minutes (accent-insensitive)',
-        () async {
-      final backend = _FakeBackend();
-      final client = clientWith(backend);
-
-      await client.forceLiturgicalHour('sexta');
-      await client.forceLiturgicalHour('VÍSPERAS');
-
-      expect(backend.calls[0].args, <String, dynamic>{'minutes': '660'});
-      expect(backend.calls[1].args, <String, dynamic>{'minutes': '1020'});
-    });
-
-    test('forceLiturgicalHour rejects unknown names', () {
-      expect(
-        () => clientWith(_FakeBackend()).forceLiturgicalHour('nope'),
-        throwsArgumentError,
-      );
-    });
-
-    test('clearClock invokes its extension with no args', () async {
-      final backend = _FakeBackend();
-      await clientWith(backend).clearClock();
-      expect(backend.calls.single.method, QuestlineLiveClient.clearClockExt);
-      expect(backend.calls.single.args, isEmpty);
-    });
-
-    test('waits until the extension registers (discovery)', () async {
-      final backend = _FakeBackend(registerAfter: 2);
-      await clientWith(backend).dumpState();
-      expect(backend.calls, hasLength(1));
-    });
-
-    test('actionable timeout if the extension never appears', () async {
-      final backend = _FakeBackend(registerAfter: 1 << 30);
-      await expectLater(
-        clientWith(backend)
-            .dumpState(timeout: const Duration(milliseconds: 150)),
-        throwsA(isA<TimeoutException>()),
-      );
-      expect(backend.disposed, isTrue);
-    });
+        connect: (_) async => b,
+      ).dumpState(timeout: const Duration(milliseconds: 150)),
+      throwsA(isA<TimeoutException>()),
+    );
+    expect(b.disposed, isTrue);
   });
 
-  group('QuestlineActor + QuestlineScenarioFixture', () {
-    test('apply snapshots prior state, sets signals, then forces the clock',
-        () async {
-      final backend = _FakeBackend(
-        result: <String, dynamic>{
-          'signals': <String, dynamic>{
-            'feria': <String, dynamic>{'value': '3', 'type': 'int'},
-          },
-        },
-      );
-      final actor = QuestlineActor(name: 't', client: clientWith(backend));
-
-      const scenario = QuestlineScenario(
-        signals: <String, Object?>{'feria': 1},
-        liturgicalHour: 'sexta',
-      );
-      await actor.apply(scenario);
-
-      expect(backend.calls.map((c) => c.method).toList(), <String>[
-        QuestlineLiveClient.dumpStateExt,
-        QuestlineLiveClient.setSignalExt,
-        QuestlineLiveClient.forceClockExt,
-      ]);
-      expect(backend.calls[1].args['value'], '1');
-      expect(backend.calls[2].args, <String, dynamic>{'minutes': '660'});
+  test('QuestlineScenario.toScenario mapea signals y reloj a pasos wire', () {
+    // El puente deprecado es exactamente lo que se testea acá.
+    // ignore: deprecated_member_use_from_same_package
+    const scenario = QuestlineScenario(
+      name: 'x',
+      signals: <String, Object?>{'unlockedVita': true},
+      clockMinutes: 660,
+    );
+    final generic = scenario.toScenario();
+    expect(generic.steps, hasLength(2));
+    expect(generic.steps.first.extension, 'ext.questline.setSignal');
+    expect(generic.steps.first.args, <String, String>{
+      'key': 'unlockedVita',
+      'value': 'true',
+      'type': 'bool',
     });
-
-    test('fixture load applies and dispose restores prior signals + clock',
-        () async {
-      final backend = _FakeBackend(
-        result: <String, dynamic>{
-          'signals': <String, dynamic>{
-            'feria': <String, dynamic>{'value': '3', 'type': 'int'},
-          },
-        },
-      );
-      final actor = QuestlineActor(name: 't', client: clientWith(backend));
-      final fixture = QuestlineScenarioFixture(
-        actor: actor,
-        scenario:
-            const QuestlineScenario(signals: <String, Object?>{'feria': 1}),
-      );
-
-      final client = await fixture.load();
-      await fixture.dispose(client);
-
-      // load: dumpState + setSignal(feria=1)
-      // dispose: setSignal(feria=3, restored) + clearClock
-      expect(backend.calls.map((c) => c.method).toList(), <String>[
-        QuestlineLiveClient.dumpStateExt,
-        QuestlineLiveClient.setSignalExt,
-        QuestlineLiveClient.setSignalExt,
-        QuestlineLiveClient.clearClockExt,
-      ]);
-      expect(backend.calls[1].args['value'], '1');
-      expect(backend.calls[2].args,
-          <String, dynamic>{'key': 'feria', 'value': '3', 'type': 'int'});
-    });
-  });
-
-  group('TestStep helpers', () {
-    test('setSignalStep / forceHourStep / clearClockStep build steps', () async {
-      final backend = _FakeBackend();
-      final client = clientWith(backend);
-
-      await setSignalStep(client, 'feria', 2).execute();
-      await forceHourStep(client, 'nona').execute();
-      await clearClockStep(client).execute();
-
-      expect(backend.calls.map((c) => c.method).toList(), <String>[
-        QuestlineLiveClient.setSignalExt,
-        QuestlineLiveClient.forceClockExt,
-        QuestlineLiveClient.clearClockExt,
-      ]);
-      expect(backend.calls[1].args, <String, dynamic>{'minutes': '840'});
-    });
-
-    test('assertSignalStep passes on match and throws on mismatch', () async {
-      final backend = _FakeBackend(
-        result: <String, dynamic>{
-          'signals': <String, dynamic>{
-            'unlockedOpusDiei': <String, dynamic>{'value': 'false'},
-          },
-        },
-      );
-      final client = clientWith(backend);
-
-      await assertSignalStep(client, 'unlockedOpusDiei', false).execute();
-      await expectLater(
-        assertSignalStep(client, 'unlockedOpusDiei', true).execute(),
-        throwsStateError,
-      );
-    });
+    expect(generic.steps.last.extension, 'ext.dev_mate.clock.force');
+    expect(generic.restoreSteps.single.extension, 'ext.dev_mate.clock.clear');
   });
 }

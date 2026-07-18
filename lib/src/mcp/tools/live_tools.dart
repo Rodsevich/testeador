@@ -1,20 +1,24 @@
+import 'package:dev_mate_mcp/dev_mate_mcp.dart' show registerDevMateTools;
 import 'package:mcp_dart/mcp_dart.dart';
 import 'package:testeador/src/live/live_persona.dart';
 import 'package:testeador/src/live/questline_live_client.dart';
 import 'package:testeador/src/mcp/tools/tools.dart';
 import 'package:testeador/src/mcp/workspace.dart';
 
-/// Registra las tools de **siembra en vivo** (`boot_persona`,
-/// `list_personas`, `configure_questline`).
+/// Registra las tools live: las GENÉRICAS de dev_mate
+/// (`federated_discover`/`federated_invoke` — con ellas una IA opera
+/// cualquier dominio federado sin cambios acá) más el sugar histórico
+/// (`boot_persona`, `list_personas`, `configure_questline`), reescrito sobre
+/// los shims de dev_mate_client conservando firma MCP.
 ///
 /// Gated tras `TESTEADOR_MCP_ENABLE_LIVE` porque se conectan al VM service de
 /// una app Flutter corriendo (que no existe en CI plano), igual que las tools
-/// de captura. Invocan las service extensions `ext.stabilitas.*` /
-/// `ext.questline.*` que el app registra en su flavor dev.
+/// de captura.
 void registerLiveTools({
   required McpServer server,
   required WorkspaceConfig workspace,
 }) {
+  registerDevMateTools(server: server);
   _registerBootPersona(server);
   _registerListPersonas(server);
   _registerConfigureQuestline(server);
@@ -123,16 +127,18 @@ void _registerConfigureQuestline(McpServer server) {
   server.registerTool(
     'configure_questline',
     description:
-        'Live-configures the questline runtime (signals, liturgical clock, '
-        'mission/unlock state) of a running dev Flutter app, by invoking its '
-        '`ext.questline.*` service extensions over the VM service. Returns the '
-        'extension JSON body. Requires the app running with QuestlineDevtools '
-        '(dev flavor).\n'
+        'Live-configures the questline runtime (signals, mission/unlock '
+        'state) and the forceable clock of a running dev Flutter app. Sugar '
+        'over the dev_mate federation: signals go to `ext.questline.*`, the '
+        'clock to `ext.dev_mate.clock.*` (liturgical-hour labels resolve '
+        'against the app presets in the catalog). Prefer '
+        'federated_discover/federated_invoke for anything else. Requires '
+        'the app running in its dev flavor.\n'
         'Actions:\n'
-        '- dumpState: no extra args; returns {targets, signals, clock}.\n'
+        '- dumpState: no extra args; returns {targets, signals}.\n'
         '- setSignal: key + value (+ optional type '
         'bool|int|double|string|null).\n'
-        '- forceHour: hour (liturgical name e.g. sexta) OR minutes '
+        '- forceHour: hour (liturgical label e.g. sexta) OR minutes '
         '(0..1439).\n'
         '- clearClock: no extra args.',
     inputSchema: JsonSchema.object(
