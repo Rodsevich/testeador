@@ -32,13 +32,13 @@ class AndroidDeviceInfo {
 
   /// JSON-friendly shape.
   Map<String, dynamic> toJson() => {
-        'serial': serial,
-        'state': state,
-        if (avdName != null) 'avd_name': avdName,
-        if (product != null) 'product': product,
-        if (model != null) 'model': model,
-        'is_emulator': isEmulator,
-      };
+    'serial': serial,
+    'state': state,
+    if (avdName != null) 'avd_name': avdName,
+    if (product != null) 'product': product,
+    if (model != null) 'model': model,
+    'is_emulator': isEmulator,
+  };
 }
 
 /// One iOS simulator visible to `xcrun simctl list devices --json`.
@@ -65,11 +65,11 @@ class IosSimulatorInfo {
 
   /// JSON-friendly shape.
   Map<String, dynamic> toJson() => {
-        'udid': udid,
-        'name': name,
-        'state': state,
-        'runtime': runtime,
-      };
+    'udid': udid,
+    'name': name,
+    'state': state,
+    'runtime': runtime,
+  };
 }
 
 /// The Chrome/web target, when a runnable Chrome binary is found.
@@ -92,10 +92,10 @@ class WebTargetInfo {
 
   /// JSON-friendly shape.
   Map<String, dynamic> toJson() => {
-        'device': device,
-        'chrome_path': chromePath,
-        'version': version,
-      };
+    'device': device,
+    'chrome_path': chromePath,
+    'version': version,
+  };
 }
 
 /// Combined snapshot of locally available devices.
@@ -118,10 +118,10 @@ class DeviceListing {
 
   /// JSON-friendly shape.
   Map<String, dynamic> toJson() => {
-        'android': android.map((a) => a.toJson()).toList(),
-        'ios': ios.map((i) => i.toJson()).toList(),
-        if (web != null) 'web': web!.toJson(),
-      };
+    'android': android.map((a) => a.toJson()).toList(),
+    'ios': ios.map((i) => i.toJson()).toList(),
+    if (web != null) 'web': web!.toJson(),
+  };
 }
 
 /// Reads local devices. [platform] one of `android`, `ios`, `web`, `all`.
@@ -184,13 +184,15 @@ Future<List<AndroidDeviceInfo>> _adbDevices() async {
       if (serial.startsWith('emulator-')) {
         avdName = await _adbEmulatorAvdName(serial);
       }
-      out.add(AndroidDeviceInfo(
-        serial: serial,
-        state: state,
-        avdName: avdName,
-        product: product,
-        model: model,
-      ));
+      out.add(
+        AndroidDeviceInfo(
+          serial: serial,
+          state: state,
+          avdName: avdName,
+          product: product,
+          model: model,
+        ),
+      );
     }
     return out;
   } on ProcessException {
@@ -227,12 +229,14 @@ Future<List<IosSimulatorInfo>> _simctlDevices() async {
       if (list is! List) return;
       for (final d in list) {
         if (d is! Map) continue;
-        out.add(IosSimulatorInfo(
-          udid: d['udid'] as String? ?? '',
-          name: d['name'] as String? ?? '',
-          state: d['state'] as String? ?? '',
-          runtime: _shortRuntime(runtime),
-        ));
+        out.add(
+          IosSimulatorInfo(
+            udid: d['udid'] as String? ?? '',
+            name: d['name'] as String? ?? '',
+            state: d['state'] as String? ?? '',
+            runtime: _shortRuntime(runtime),
+          ),
+        );
       }
     });
     return out;

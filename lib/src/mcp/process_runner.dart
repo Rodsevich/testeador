@@ -38,14 +38,14 @@ class ProcessRunResult {
 
   /// JSON-friendly representation for MCP tool responses.
   Map<String, dynamic> toJson() => {
-        'command': command,
-        'working_directory': workingDirectory,
-        'exit_code': exitCode,
-        'stdout': stdout,
-        'stderr': stderr,
-        'duration_ms': durationMs,
-        'timed_out': timedOut,
-      };
+    'command': command,
+    'working_directory': workingDirectory,
+    'exit_code': exitCode,
+    'stdout': stdout,
+    'stderr': stderr,
+    'duration_ms': durationMs,
+    'timed_out': timedOut,
+  };
 }
 
 /// Spawns [executable] [arguments], captures both streams, and enforces
@@ -69,12 +69,8 @@ Future<ProcessRunResult> runProcess({
 
   final stdoutBuf = StringBuffer();
   final stderrBuf = StringBuffer();
-  final outSub = process.stdout
-      .transform(utf8.decoder)
-      .listen(stdoutBuf.write);
-  final errSub = process.stderr
-      .transform(utf8.decoder)
-      .listen(stderrBuf.write);
+  final outSub = process.stdout.transform(utf8.decoder).listen(stdoutBuf.write);
+  final errSub = process.stderr.transform(utf8.decoder).listen(stderrBuf.write);
 
   var timedOut = false;
   final timer = Timer(timeout, () {

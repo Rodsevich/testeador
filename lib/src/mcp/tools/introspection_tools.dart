@@ -181,9 +181,10 @@ void _registerDryRunSuite(McpServer server, WorkspaceConfig workspace) {
                     ),
             )
             .toList();
-        final kept = filterFlows(pseudoFlows, options)
-            .map((f) => f.name)
-            .toSet();
+        final kept = filterFlows(
+          pseudoFlows,
+          options,
+        ).map((f) => f.name).toSet();
         final wouldRun = inspected.flows
             .where((f) => kept.contains(f.name))
             .map((f) => {'name': f.name, 'tags': f.tags})
@@ -225,8 +226,7 @@ String _skipReason(InspectedFlow f, TesteadorOptions opts) {
     return 'not in include_flows';
   }
   if (opts.excludeFlows.contains(f.name)) return 'matched exclude_flows';
-  if (opts.includeTags.isNotEmpty &&
-      !f.tags.any(opts.includeTags.contains)) {
+  if (opts.includeTags.isNotEmpty && !f.tags.any(opts.includeTags.contains)) {
     return 'no tag in include_tags';
   }
   if (f.tags.any(opts.excludeTags.contains)) return 'tag in exclude_tags';

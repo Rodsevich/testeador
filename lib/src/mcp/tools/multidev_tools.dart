@@ -97,33 +97,35 @@ List<TargetDevice> _buildDevices(Object? raw) {
 }
 
 JsonSchema _devicesSchema() => JsonSchema.array(
-      items: JsonSchema.object(
-        properties: {
-          'platform':
-              JsonSchema.string(enumValues: ['android', 'ios', 'web']),
-          'id': JsonSchema.string(),
-          'avd_name': JsonSchema.string(),
-          'headless': JsonSchema.boolean(defaultValue: false),
-          'url': JsonSchema.string(
-            description: 'Web only: origin the app is served from '
-                '(e.g. http://localhost:5000). Falls back to `id`.',
-          ),
-          'route': JsonSchema.string(
-            description: 'Web only: route appended to `url` before capture.',
-          ),
-          'web_headless': JsonSchema.boolean(
-            defaultValue: true,
-            description: 'Web only: run Chromium headless during '
-                '`patrol test` (--web-headless). Set false to watch locally.',
-          ),
-          'viewport': JsonSchema.string(
-            description: 'Web only: `<width>x<height>` for `patrol test` '
-                '(--web-viewport) and screenshots. Defaults to 1280x900.',
-          ),
-        },
-        required: ['platform', 'id'],
+  items: JsonSchema.object(
+    properties: {
+      'platform': JsonSchema.string(enumValues: ['android', 'ios', 'web']),
+      'id': JsonSchema.string(),
+      'avd_name': JsonSchema.string(),
+      'headless': JsonSchema.boolean(defaultValue: false),
+      'url': JsonSchema.string(
+        description:
+            'Web only: origin the app is served from '
+            '(e.g. http://localhost:5000). Falls back to `id`.',
       ),
-    );
+      'route': JsonSchema.string(
+        description: 'Web only: route appended to `url` before capture.',
+      ),
+      'web_headless': JsonSchema.boolean(
+        defaultValue: true,
+        description:
+            'Web only: run Chromium headless during '
+            '`patrol test` (--web-headless). Set false to watch locally.',
+      ),
+      'viewport': JsonSchema.string(
+        description:
+            'Web only: `<width>x<height>` for `patrol test` '
+            '(--web-viewport) and screenshots. Defaults to 1280x900.',
+      ),
+    },
+    required: ['platform', 'id'],
+  ),
+);
 
 void _registerBootFleet(McpServer server, WorkspaceConfig workspace) {
   server.registerTool(
@@ -143,8 +145,8 @@ void _registerBootFleet(McpServer server, WorkspaceConfig workspace) {
       try {
         final devices = _buildDevices(args['devices']);
         if (devices.isEmpty) return errResult('No devices provided.');
-        final cwd = (args['working_directory'] as String?) ??
-            workspace.root.path;
+        final cwd =
+            (args['working_directory'] as String?) ?? workspace.root.path;
         final fleet = DeviceFleet(
           devices,
           evidenceDir: workspace.evidenceDir.path,
@@ -166,8 +168,7 @@ void _registerBootFleet(McpServer server, WorkspaceConfig workspace) {
         return okResult({
           'booted': booted,
           'failed': failed,
-          'duration_ms':
-              DateTime.now().difference(started).inMilliseconds,
+          'duration_ms': DateTime.now().difference(started).inMilliseconds,
         });
       } on Object catch (e) {
         return errResult('boot_fleet failed: $e');
@@ -201,8 +202,7 @@ void _registerShutdownFleet(McpServer server, WorkspaceConfig workspace) {
         await fleet.shutdownAll();
         return okResult({
           'shutdown': devices.map((d) => d.id).toList(),
-          'duration_ms':
-              DateTime.now().difference(started).inMilliseconds,
+          'duration_ms': DateTime.now().difference(started).inMilliseconds,
         });
       } on Object catch (e) {
         return errResult('shutdown_fleet failed: $e');
@@ -239,10 +239,10 @@ void _registerSnapshotFleet(McpServer server, WorkspaceConfig workspace) {
         if (devices.isEmpty) return errResult('No devices provided.');
         final label = args['label'] as String;
         final composite = args['composite'] as bool? ?? true;
-        final evidenceDir = (args['evidence_dir'] as String?) ??
-            workspace.evidenceDir.path;
-        final cwd = (args['working_directory'] as String?) ??
-            workspace.root.path;
+        final evidenceDir =
+            (args['evidence_dir'] as String?) ?? workspace.evidenceDir.path;
+        final cwd =
+            (args['working_directory'] as String?) ?? workspace.root.path;
         final fleet = DeviceFleet(
           devices,
           evidenceDir: evidenceDir,
@@ -256,12 +256,14 @@ void _registerSnapshotFleet(McpServer server, WorkspaceConfig workspace) {
           'timestamp': bundle.timestamp,
           'skew_ms': bundle.skewMs,
           'shots': bundle.shots
-              .map((s) => {
-                    'platform': s.device.platform,
-                    'id': s.device.id,
-                    'path': s.file.path,
-                    'captured_at_ms': s.capturedAtMs,
-                  })
+              .map(
+                (s) => {
+                  'platform': s.device.platform,
+                  'id': s.device.id,
+                  'path': s.file.path,
+                  'captured_at_ms': s.capturedAtMs,
+                },
+              )
               .toList(),
           if (bundle.composite != null)
             'composite_path': bundle.composite!.path,
@@ -349,8 +351,7 @@ void _registerRunPatrolFleet(McpServer server, WorkspaceConfig workspace) {
         return okResult({
           'working_directory': cwd,
           'results': results.map(_patrolResultToJson).toList(),
-          'duration_ms':
-              DateTime.now().difference(started).inMilliseconds,
+          'duration_ms': DateTime.now().difference(started).inMilliseconds,
         });
       } on Object catch (e) {
         return errResult('run_patrol_fleet failed: $e');

@@ -64,8 +64,7 @@ void registerDiscoveryTools({
     callback: (args, extra) async {
       try {
         final cliArgs = _buildCliArgs(args);
-        final cwd =
-            (args['package_path'] as String?) ?? workspace.root.path;
+        final cwd = (args['package_path'] as String?) ?? workspace.root.path;
         final timeout = Duration(
           seconds: (args['timeout_seconds'] as int?) ?? 120,
         );
@@ -84,7 +83,8 @@ void registerDiscoveryTools({
           );
         }
 
-        final picks = (args['pick_fqids'] as List?)?.whereType<String>() ??
+        final picks =
+            (args['pick_fqids'] as List?)?.whereType<String>() ??
             const <String>[];
         if (picks.isEmpty) {
           final entries = _tryDecodeJsonList(result.stdout);

@@ -42,8 +42,10 @@ class InspectedActor {
   final String? file;
 
   /// JSON-friendly representation.
-  Map<String, dynamic> toJson() =>
-      {'name': name, if (file != null) 'file': file};
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    if (file != null) 'file': file,
+  };
 }
 
 /// One flow discovered in a suite (or in an imported `*_flow.dart` file).
@@ -78,13 +80,13 @@ class InspectedFlow {
 
   /// JSON-friendly representation.
   Map<String, dynamic> toJson() => {
-        'name': name,
-        'kind': kind.name,
-        'tags': tags,
-        'step_names': stepNames,
-        if (description != null) 'description': description,
-        if (file != null) 'file': file,
-      };
+    'name': name,
+    'kind': kind.name,
+    'tags': tags,
+    'step_names': stepNames,
+    if (description != null) 'description': description,
+    if (file != null) 'file': file,
+  };
 }
 
 /// Result of [inspectSuite].
@@ -118,13 +120,13 @@ class InspectedSuite {
 
   /// JSON-friendly representation.
   Map<String, dynamic> toJson() => {
-        'path': path,
-        'mode': mode.name,
-        'actors': actors.map((a) => a.toJson()).toList(),
-        'flows': flows.map((f) => f.toJson()).toList(),
-        'tags': allTags.toList()..sort(),
-        'warnings': warnings,
-      };
+    'path': path,
+    'mode': mode.name,
+    'actors': actors.map((a) => a.toJson()).toList(),
+    'flows': flows.map((f) => f.toJson()).toList(),
+    'tags': allTags.toList()..sort(),
+    'warnings': warnings,
+  };
 }
 
 /// Parses [suite] and returns its structure.
@@ -379,13 +381,13 @@ void _collectFlowDeclarations(
 
 extension on InspectedFlow {
   InspectedFlow copyWithFile(String f) => InspectedFlow(
-        name: name,
-        kind: kind,
-        tags: tags,
-        stepNames: stepNames,
-        description: description,
-        file: f,
-      );
+    name: name,
+    kind: kind,
+    tags: tags,
+    stepNames: stepNames,
+    description: description,
+    file: f,
+  );
 }
 
 InspectedFlow? _extractFlowFromBody(FunctionBody body) {

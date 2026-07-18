@@ -30,7 +30,8 @@ void _registerScaffoldSuite(McpServer server) {
         description: 'What the backend does and what to contract-test.',
       ),
       'actors': const PromptArgumentDefinition(
-        description: 'Comma-separated actor names/roles (e.g. "Buyer, Seller").',
+        description:
+            'Comma-separated actor names/roles (e.g. "Buyer, Seller").',
       ),
       'endpoints': const PromptArgumentDefinition(
         description: 'Comma-separated endpoints or features to cover.',

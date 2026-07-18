@@ -80,8 +80,8 @@ void _registerRunSuiteCli(McpServer server, WorkspaceConfig workspace) {
         if (!File(suitePath).existsSync()) {
           return errResult('suite_path does not exist: $suitePath');
         }
-        final cwd = (args['working_directory'] as String?) ??
-            workspace.root.path;
+        final cwd =
+            (args['working_directory'] as String?) ?? workspace.root.path;
         final cliArgs = <String>[
           'run',
           suitePath,
@@ -106,7 +106,8 @@ void _registerRunSuiteCli(McpServer server, WorkspaceConfig workspace) {
             'execute': false,
           });
         }
-        final timeoutS = (args['timeout_seconds'] as num?)?.toInt() ??
+        final timeoutS =
+            (args['timeout_seconds'] as num?)?.toInt() ??
             _defaultTimeoutSeconds;
         final result = await runProcess(
           executable: 'dart',
@@ -220,7 +221,8 @@ void _registerRunSuiteDartTest(McpServer server, WorkspaceConfig workspace) {
           });
         }
 
-        final timeoutS = (args['timeout_seconds'] as num?)?.toInt() ??
+        final timeoutS =
+            (args['timeout_seconds'] as num?)?.toInt() ??
             _defaultTimeoutSeconds;
         final result = await runProcess(
           executable: 'dart',
@@ -331,8 +333,7 @@ void _registerCompileSuiteExe(McpServer server, WorkspaceConfig workspace) {
     ),
     callback: (args, extra) async {
       try {
-        final suitePath =
-            _resolveAbs(workspace, args['suite_path'] as String);
+        final suitePath = _resolveAbs(workspace, args['suite_path'] as String);
         if (!File(suitePath).existsSync()) {
           return errResult('suite_path does not exist: $suitePath');
         }
@@ -355,7 +356,8 @@ void _registerCompileSuiteExe(McpServer server, WorkspaceConfig workspace) {
           });
         }
 
-        final timeoutS = (args['timeout_seconds'] as num?)?.toInt() ??
+        final timeoutS =
+            (args['timeout_seconds'] as num?)?.toInt() ??
             _defaultTimeoutSeconds;
         final result = await runProcess(
           executable: 'dart',

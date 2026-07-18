@@ -160,16 +160,19 @@ void _registerScaffoldFlow(McpServer server, WorkspaceConfig workspace) {
     callback: (args, extra) async {
       try {
         final kind = (args['kind'] as String?) ?? 'lasting';
-        final templateKey =
-            kind == 'transient' ? 'flow_transient' : 'flow_lasting';
-        final tags = (args['tags'] as List?)?.whereType<String>().toList() ??
+        final templateKey = kind == 'transient'
+            ? 'flow_transient'
+            : 'flow_lasting';
+        final tags =
+            (args['tags'] as List?)?.whereType<String>().toList() ??
             const <String>[];
         final stepNames =
             (args['step_names'] as List?)?.whereType<String>().toList() ??
-                const <String>['TODO: first step'];
+            const <String>['TODO: first step'];
         final stepsBlock = stepNames
             .map(
-              (s) => 'TestStep(\n'
+              (s) =>
+                  'TestStep(\n'
                   "        name: '${_escape(s)}',\n"
                   '        action: () async {\n'
                   '          // TODO(testeador): implement this step.\n'
@@ -180,8 +183,7 @@ void _registerScaffoldFlow(McpServer server, WorkspaceConfig workspace) {
         final content = renderTemplate(templates[templateKey]!, {
           'flow_function': args['flow_function'] as String,
           'flow_name': _escape(args['flow_name'] as String),
-          'flow_description':
-              _escape((args['description'] as String?) ?? ''),
+          'flow_description': _escape((args['description'] as String?) ?? ''),
           'tags': tags.map((t) => "'${_escape(t)}'").join(', '),
           'actors_block':
               '// TODO(testeador): construct the actors used by this flow.',
@@ -228,25 +230,24 @@ void _registerScaffoldSuiteRunner(
       try {
         final actorImports =
             (args['actor_imports'] as List?)?.whereType<String>().toList() ??
-                const <String>[];
+            const <String>[];
         final flowImports =
             (args['flow_imports'] as List?)?.whereType<String>().toList() ??
-                const <String>[];
-        final actorFactories = (args['actor_factories'] as List?)
-                ?.whereType<String>()
-                .toList() ??
+            const <String>[];
+        final actorFactories =
+            (args['actor_factories'] as List?)?.whereType<String>().toList() ??
             const <String>[];
         final flowBuilders =
             (args['flow_builders'] as List?)?.whereType<String>().toList() ??
-                const <String>['/* TODO: buildYourFlow() */'];
+            const <String>['/* TODO: buildYourFlow() */'];
 
         final actorBlock = actorFactories.isEmpty
             ? '// TODO(testeador): instantiate actors here.'
             : actorFactories
-                .asMap()
-                .entries
-                .map((e) => 'final actor${e.key} = ${e.value};')
-                .join('\n  ');
+                  .asMap()
+                  .entries
+                  .map((e) => 'final actor${e.key} = ${e.value};')
+                  .join('\n  ');
         final actorsList = List.generate(
           actorFactories.length,
           (i) => 'actor$i',
@@ -296,10 +297,10 @@ void _registerScaffoldDartTestMain(
       try {
         final flowImports =
             (args['flow_imports'] as List?)?.whereType<String>().toList() ??
-                const <String>[];
+            const <String>[];
         final flowBuilders =
             (args['flow_builders'] as List?)?.whereType<String>().toList() ??
-                const <String>['/* TODO: buildYourFlow() */'];
+            const <String>['/* TODO: buildYourFlow() */'];
         final content = renderTemplate(templates['contract_test']!, {
           'flow_imports': flowImports.map((i) => "import '$i';").join('\n'),
           'flows_list': flowBuilders.map((b) => '$b,').join('\n      '),
@@ -307,8 +308,7 @@ void _registerScaffoldDartTestMain(
         });
         return _emit(
           workspace: workspace,
-          path: (args['output_path'] as String?) ??
-              'test/contract_test.dart',
+          path: (args['output_path'] as String?) ?? 'test/contract_test.dart',
           content: content,
           dryRun: _dryRun(args),
         );

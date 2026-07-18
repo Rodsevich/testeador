@@ -72,8 +72,7 @@ List<ActorCurlLog> parseCurlLogs(String output) {
 ///
 /// Returns `null` when the summary line cannot be located.
 ({int passed, int total})? parseRunSummary(String output) {
-  final match =
-      RegExp(r'(\d+)/(\d+)\s+flows\s+passed\b').firstMatch(output);
+  final match = RegExp(r'(\d+)/(\d+)\s+flows\s+passed\b').firstMatch(output);
   if (match == null) return null;
   return (
     passed: int.parse(match.group(1)!),
