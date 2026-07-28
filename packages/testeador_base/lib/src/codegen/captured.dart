@@ -12,9 +12,18 @@
 /// re-export.
 library;
 
+// ponytail: `test` es dev_dependency, no dependency, porque tenerlo en lib/
+// impide que este paquete sea dependencia de uno Flutter (choque de test_api
+// con flutter_test). Esta librería es el drop-in de `package:test` para los
+// archivos que emite el codegen, así que su re-export es intrínseco — y todo
+// consumidor del codegen ya tiene `test` en su pubspec. Si algún día alguien
+// lo importa sin tenerlo, el error de pub es claro; el upgrade path es mover
+// codegen/ a su propio paquete.
+// ignore: depend_on_referenced_packages
 import 'package:test/test.dart' as real_test show Timeout;
 import 'package:testeador_base/src/codegen/registry.dart';
 
+// ignore: depend_on_referenced_packages
 export 'package:test/test.dart'
     hide group, setUp, setUpAll, tearDown, tearDownAll, test;
 

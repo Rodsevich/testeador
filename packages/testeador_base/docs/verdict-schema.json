@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/testeador/verdict-schema.json",
+  "title": "Testeador AI verdict file (verdicts.json)",
+  "description": "Versioned record of AI judge verdicts for a scenario's captures. Lives next to the baselines (test_evidence/baseline/<scenario>/verdicts.json) and is committed to git, so every baseline replacement carries its rationale into the PR diff.",
+  "type": "object",
+  "required": ["schemaVersion", "verdicts"],
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "description": "Version of this contract. Bump only with a migration note."
+    },
+    "verdicts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/verdict" }
+    }
+  },
+  "$defs": {
+    "verdict": {
+      "type": "object",
+      "required": ["capture", "actor", "slug", "verdict", "rationale", "judgedAt"],
+      "properties": {
+        "capture": {
+          "type": "string",
+          "description": "Run artifact file name the verdict is about (e.g. comprador-03_carrito!!.png)."
+        },
+        "actor": { "type": "string" },
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$",
+          "description": "Step slug — keys the baseline file (<actor>-<slug>.png)."
+        },
+        "verdict": {
+          "enum": ["fix_code", "fix_test", "replace_baseline", "inconclusive"],
+          "description": "fix_code: real regression, the app must change. fix_test: the step's intent or interactions are outdated. replace_baseline: intentional change — the judge copies the new capture over the baseline. inconclusive: a human must decide; escalate, do not act."
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Why this verdict, in terms of the step's declared intent and the visible evidence. This is the audit trail reviewed in the PR."
+        },
+        "severity": {
+          "enum": ["low", "medium", "high", "critical"],
+          "description": "Only meaningful for fix_code."
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "judgedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "environmentMismatch": {
+          "type": "boolean",
+          "description": "True when the run's environment (Flutter version / platform) differed from the baseline's canonical environment — drift was discounted accordingly."
+        }
+      }
+    }
+  }
+}

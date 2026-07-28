@@ -33,7 +33,8 @@ dependencies:
   meta: ^1.10.0
   path: ^1.9.0
   source_gen: ^4.2.3
-  test: ^1.30.0
+  # La capa de scaffolding que comparten `package:test` y `flutter_test`.
+  test_api: ">=0.7.11 <0.8.0"
   # Solo para la captura de tráfico (vm_service_capture.dart); el transporte
   # live migró a dev_mate_client.
   vm_service: ^15.0.0
@@ -47,6 +48,7 @@ dependency_overrides:
     path: ../../../packages/dev_mate/packages/dev_mate_mcp
 
 dev_dependencies:
+  test: ^1.30.0
   build_runner: ^2.4.0
   build_test: ^3.5.15
   mocktail: ^1.0.5

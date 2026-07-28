@@ -1,7 +1,14 @@
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:test/test.dart' as dart_test;
+//  y NO : es la capa que  también usa,
+// así este paquete puede ser dependencia de uno Flutter. Con 
+// en lib/ la resolución falla (flutter_test pinea test_api 0.7.11).
+// test_api y NO package:test: es la capa de scaffolding que flutter_test
+// también usa, así este paquete puede ser dependencia de uno Flutter. Con
+// package:test en lib/ la resolución falla — flutter_test pinea test_api
+// 0.7.11 mientras package:test exige 0.7.10/12/13.
+import 'package:test_api/scaffolding.dart' as dart_test;
 import 'package:testeador_base/src/actor.dart';
 import 'package:testeador_base/src/test_flow.dart';
 import 'package:testeador_base/src/testeador_options.dart';

@@ -1,0 +1,60 @@
+name: testeador
+description: >-
+  End-to-end testing for Flutter with UI flows as the unit of work: per-step
+  evidence capture with declared intent, drift scoring against versioned
+  baselines and AI-ready run manifests. Networking is derivative — an actor's
+  HTTP traffic is recorded and dumped only when a UI step fails.
+version: 0.5.0
+publish_to: none
+repository: https://github.com/Rodsevich/testeador
+homepage: https://github.com/Rodsevich/testeador
+issue_tracker: https://github.com/Rodsevich/testeador/issues
+topics:
+  - testing
+  - integration-testing
+  - golden-testing
+  - flutter
+  - evidence
+
+environment:
+  sdk: ^3.11.0
+  flutter: ">=3.44.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # `flutter_test` es dependencia de lib/, no de dev: la captura de evidencia
+  # rasteriza el árbol de widgets desde un WidgetTester.
+  flutter_test:
+    sdk: flutter
+  image: ^4.5.0
+  path: ^1.9.0
+  patrol_finders: ^3.5.0
+  # La base Dart pura: tipos de flujo/actor/fixture, motor de evidencia
+  # (marcas, diff, manifest), multidev y mirador.
+  #
+  # OJO: la dependencia va en este sentido y no al revés. `testeador_base`
+  # necesita `package:test` + `analyzer ^13` (MCP y codegen), y eso NO resuelve
+  # junto a `flutter_test` (que pinea test_api 0.7.11). Un paquete Dart puro
+  # tampoco puede depender de uno Flutter. Por eso la base es Dart puro y esta
+  # capa —la de UI, la de alto nivel— es la que depende de ella.
+  testeador_base:
+    path: ../testeador_base
+
+dependency_overrides:
+  # dev_mate* no está publicado y `testeador_base` lo resuelve con overrides
+  # internos que NO viajan al consumidor (pub solo aplica los del paquete
+  # raíz). Hay que repetirlos acá, como hace el host e2e de stabilitas.
+  dev_mate:
+    path: ../../../packages/dev_mate/packages/dev_mate
+  dev_mate_client:
+    path: ../../../packages/dev_mate/packages/dev_mate_client
+  dev_mate_mcp:
+    path: ../../../packages/dev_mate/packages/dev_mate_mcp
+
+dev_dependencies:
+  very_good_analysis: ^10.2.0
+
+flutter:
+  assets:
+    - assets/fonts/

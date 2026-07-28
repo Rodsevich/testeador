@@ -24,9 +24,10 @@ abstract class Actor {
   /// {@macro actor}
   Actor({
     required this.name,
-    required this.dio,
+    Dio? dio,
     Set<String> redactHeaders = const {'authorization', 'cookie'},
-  }) : curlInterceptor = CurlInterceptor(redactHeaders: redactHeaders);
+  }) : dio = dio ?? Dio(),
+       curlInterceptor = CurlInterceptor(redactHeaders: redactHeaders);
 
   /// Human-readable name for this actor (used in failure output).
   final String name;
@@ -35,6 +36,11 @@ abstract class Actor {
   ///
   /// Configure base URL, default headers, auth interceptors, etc. here.
   /// A [CurlInterceptor] will be attached to this instance before running.
+  ///
+  /// Optional: an actor that drives a UI instead of an API gets a bare [Dio]
+  /// it may never use. It still pays off — the interceptor keeps recording,
+  /// so when a UI step fails the curls are there to explain what the backend
+  /// did (see `UiActor` in the `testeador` package).
   final Dio dio;
 
   /// The interceptor recording cURL commands for this actor.
