@@ -13,6 +13,38 @@ void main() {
       );
     });
 
+    test('flavor + extraArgs go after the device, before device flags', () {
+      const device = AndroidEmulator(serial: 'emulator-5554');
+      expect(
+        patrolCommandFor(
+          device,
+          target,
+          flavor: 'dev',
+          extraArgs: const ['--no-uninstall'],
+        ),
+        [
+          'test', '--target', target, '--device', 'emulator-5554',
+          '--flavor', 'dev', '--no-uninstall',
+        ],
+      );
+    });
+
+    test('flavor + extraArgs precede the WebDevice --web-* flags', () {
+      final device = WebDevice(
+        baseUrl: 'http://localhost:8080',
+        chromePath: '/bin/true',
+      );
+      expect(
+        patrolCommandFor(device, target, flavor: 'stg', extraArgs: const ['-v']),
+        [
+          'test', '--target', target, '--device', 'chrome',
+          '--flavor', 'stg', '-v',
+          '--web-headless', 'true',
+          '--web-viewport', '{"width": 1280, "height": 900}',
+        ],
+      );
+    });
+
     test('iOS uses the UDID as the patrol device', () {
       const udid = 'F7B5C0DE-0000-0000-0000-000000000000';
       const device = IosSimulator(udid: udid);

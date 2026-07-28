@@ -4,6 +4,7 @@ library;
 export 'src/actor.dart';
 export 'src/curl_interceptor.dart';
 export 'src/fixture.dart';
+export 'src/live/live_persona.dart';
 export 'src/live/questline_live_client.dart';
 export 'src/live/questline_scenario.dart';
 export 'src/multidev/device_fleet.dart';

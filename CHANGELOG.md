@@ -8,6 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`multidev` para apps con flavors + recuperación de artefactos.**
+  `PatrolRunner.runOn` / `DeviceFleet.runPatrolAcross` / `runPatrolOn` aceptan
+  `flavor` (→ `--flavor <x>`) y `extraArgs` (flags arbitrarios, p. ej.
+  `--no-uninstall`). `TargetDevice.pull` + `DeviceFleet.pullArtifacts` bajan a
+  la máquina los archivos que un agent flow escribió en el device (capturas por
+  paso) tras una corrida con `--no-uninstall`. `LivePersonaClient` ahora se
+  exporta desde el barrel `package:testeador/testeador.dart`.
 - **Live-persona seeding — `boot_persona` / `list_personas` MCP tools + a
   DevTools extension.** Boot a running **dev** Flutter app already seeded into a
   persona (an `Actor`+`Fixture`) by invoking its `ext.stabilitas.*` service

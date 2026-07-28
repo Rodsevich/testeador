@@ -100,12 +100,16 @@ class DeviceFleet {
   Future<List<PatrolResult>> runPatrolAcross({
     required String target,
     required Map<String, Map<String, String>> envPerDevice,
+    String? flavor,
+    List<String> extraArgs = const [],
   }) {
     return Future.wait(devices.map((d) {
       final env = envPerDevice[d.id] ?? const <String, String>{};
       return PatrolRunner.runOn(
         d,
         target: target,
+        flavor: flavor,
+        extraArgs: extraArgs,
         env: env,
         workingDirectory: workingDirectory,
       );
@@ -120,11 +124,39 @@ class DeviceFleet {
     required TargetDevice device,
     required String target,
     Map<String, String> env = const {},
+    String? flavor,
+    List<String> extraArgs = const [],
   }) =>
       PatrolRunner.runOn(
         device,
         target: target,
+        flavor: flavor,
+        extraArgs: extraArgs,
         env: env,
         workingDirectory: workingDirectory,
       );
+
+  /// Pulls [remotePath] from every device into
+  /// `<evidenceDir>/<label>/<platform>-<id>/` — recupera archivos que un agent
+  /// flow escribió en el device (p. ej. capturas por paso) tras una corrida con
+  /// `--no-uninstall` (sin eso patrol desinstala el app y borra el sandbox).
+  /// Devices sin bridge de archivos (web/iOS) se saltean.
+  Future<void> pullArtifacts({
+    required String remotePath,
+    required String label,
+  }) async {
+    await Future.wait(devices.map((d) async {
+      final dir = Directory('$evidenceDir/$label/${d.platform}-${d.id}');
+      try {
+        await d.pull(remotePath, dir);
+        // pull no soportado (web/iOS) es esperado; toleramos por plataforma.
+        // ignore: avoid_catching_errors
+      } on UnsupportedError {
+        // Sin sistema de archivos que pullear (web/iOS): se saltea.
+      } on ProcessException {
+        // No hay artefactos que bajar (el flow no escribió ninguno): la
+        // recuperación es best-effort, no tumba el flujo.
+      }
+    }));
+  }
 }

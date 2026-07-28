@@ -46,6 +46,11 @@ sealed class TargetDevice {
 
   /// Captures the device screen into [out] (PNG) and returns the same file.
   Future<File> screenshot(File out);
+
+  /// Pulls a file/dir from [remotePath] on the device into [localDir] on the
+  /// host — for recovering artifacts an agent flow wrote (per-step screenshots,
+  /// logs). Only native devices with a file bridge (adb) implement it.
+  Future<void> pull(String remotePath, Directory localDir);
 }
 
 /// {@template android_emulator}
@@ -131,6 +136,21 @@ final class AndroidEmulator extends TargetDevice {
     return out;
   }
 
+  @override
+  Future<void> pull(String remotePath, Directory localDir) async {
+    await localDir.create(recursive: true);
+    final args = ['-s', serial, 'pull', remotePath, localDir.path];
+    final r = await Process.run(adbPath, args);
+    if (r.exitCode != 0) {
+      throw ProcessException(
+        adbPath,
+        args,
+        (r.stderr as String?) ?? 'adb pull failed',
+        r.exitCode,
+      );
+    }
+  }
+
   Future<bool> _isBooted() async {
     final r = await Process.run(adbPath, ['-s', serial, 'get-state']);
     return r.exitCode == 0 &&
@@ -210,6 +230,14 @@ final class IosSimulator extends TargetDevice {
       );
     }
     return out;
+  }
+
+  @override
+  Future<void> pull(String remotePath, Directory localDir) async {
+    throw UnsupportedError(
+      'IosSimulator.pull no implementado: usá `xcrun simctl get_app_container` '
+      '+ copia manual del sandbox.',
+    );
   }
 }
 
@@ -334,6 +362,13 @@ final class WebDevice extends TargetDevice {
 
   @override
   Future<void> shutdown() async {}
+
+  @override
+  Future<void> pull(String remotePath, Directory localDir) async {
+    throw UnsupportedError(
+      'WebDevice no tiene un sistema de archivos que pullear.',
+    );
+  }
 
   @override
   Future<File> screenshot(File out) async {

@@ -18,18 +18,25 @@ abstract class PatrolRunner {
   /// appending any device-specific [TargetDevice.patrolExtraArgs] (e.g. the
   /// `--web-*` flags for a [WebDevice]).
   ///
+  /// [flavor] adds `--flavor <flavor>` for apps that build per flavor.
+  /// [extraArgs] appends arbitrary flags — e.g. `--no-uninstall` to keep the
+  /// app installed so `DeviceFleet.pullArtifacts` can recover files the flow
+  /// wrote on-device.
+  ///
   /// [env] is merged with the host environment. A `DEVICE_ID` variable is
   /// always set so the agent flow can branch on which device it is running on.
   static Future<PatrolResult> runOn(
     TargetDevice device, {
     required String target,
+    String? flavor,
+    List<String> extraArgs = const [],
     Map<String, String> env = const {},
     String workingDirectory = '.',
     String patrolPath = 'patrol',
   }) async {
     final result = await Process.run(
       patrolPath,
-      patrolCommandFor(device, target),
+      patrolCommandFor(device, target, flavor: flavor, extraArgs: extraArgs),
       environment: {'DEVICE_ID': device.id, ...env},
       workingDirectory: workingDirectory,
     );
@@ -56,12 +63,20 @@ abstract class PatrolRunner {
 /// web      → test --target <t> --device chrome --web-headless true \
 ///                 --web-viewport 1280x900
 /// ```
-List<String> patrolCommandFor(TargetDevice device, String target) => [
+List<String> patrolCommandFor(
+  TargetDevice device,
+  String target, {
+  String? flavor,
+  List<String> extraArgs = const [],
+}) =>
+    [
       'test',
       '--target',
       target,
       '--device',
       device.patrolDeviceId,
+      if (flavor != null) ...['--flavor', flavor],
+      ...extraArgs,
       ...device.patrolExtraArgs(),
     ];
 
