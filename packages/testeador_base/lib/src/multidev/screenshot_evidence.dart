@@ -37,12 +37,12 @@ class ScreenshotBundle {
 
   /// Returns a copy of this bundle with [composite] populated.
   ScreenshotBundle withComposite(File composite) => ScreenshotBundle(
-        label: label,
-        timestamp: timestamp,
-        shots: shots,
-        skewMs: skewMs,
-        composite: composite,
-      );
+    label: label,
+    timestamp: timestamp,
+    shots: shots,
+    skewMs: skewMs,
+    composite: composite,
+  );
 
   /// Persists `metadata.json` next to the captured PNGs.
   ///
@@ -56,12 +56,14 @@ class ScreenshotBundle {
       'skewMs': skewMs,
       'composite': composite?.path,
       'shots': shots
-          .map((s) => {
-                'platform': s.device.platform,
-                'id': s.device.id,
-                'path': s.file.path,
-                'capturedAtMs': s.capturedAtMs,
-              })
+          .map(
+            (s) => {
+              'platform': s.device.platform,
+              'id': s.device.id,
+              'path': s.file.path,
+              'capturedAtMs': s.capturedAtMs,
+            },
+          )
           .toList(),
     };
     await file.writeAsString(const JsonEncoder.withIndent('  ').convert(body));

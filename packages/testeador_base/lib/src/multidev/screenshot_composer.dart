@@ -41,11 +41,14 @@ abstract class ScreenshotComposer {
         .map((f) => img.decodePng(f.readAsBytesSync())!)
         .toList(growable: false);
     final targetH = decoded.map((i) => i.height).reduce(math.min);
-    final scaled = decoded.map((i) {
-      return i.height == targetH ? i : img.copyResize(i, height: targetH);
-    }).toList(growable: false);
+    final scaled = decoded
+        .map((i) {
+          return i.height == targetH ? i : img.copyResize(i, height: targetH);
+        })
+        .toList(growable: false);
 
-    final totalW = scaled.fold<int>(0, (s, i) => s + i.width) +
+    final totalW =
+        scaled.fold<int>(0, (s, i) => s + i.width) +
         gapPx * (scaled.length - 1);
     final showHeader = labels != null;
     final canvasH = targetH + (showHeader ? headerHeightPx : 0);
@@ -82,8 +85,8 @@ abstract class ScreenshotComposer {
   }
 
   static img.ColorRgb8 _rgb(int hex) => img.ColorRgb8(
-        (hex >> 16) & 0xFF,
-        (hex >> 8) & 0xFF,
-        hex & 0xFF,
-      );
+    (hex >> 16) & 0xFF,
+    (hex >> 8) & 0xFF,
+    hex & 0xFF,
+  );
 }

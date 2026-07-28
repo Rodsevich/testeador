@@ -70,7 +70,12 @@ void registerDiscoveryTools({
         );
         final result = await runProcess(
           executable: 'dart',
-          arguments: ['run', 'testeador_base:testeador', 'discover', ...cliArgs],
+          arguments: [
+            'run',
+            'testeador_base:testeador',
+            'discover',
+            ...cliArgs,
+          ],
           workingDirectory: cwd,
           timeout: timeout,
         );

@@ -23,8 +23,7 @@ void main() {
   test(
     'ScreenshotComposer.sideBySide matches committed golden',
     () async {
-      final tempDir =
-          await Directory.systemTemp.createTemp('composer_golden_');
+      final tempDir = await Directory.systemTemp.createTemp('composer_golden_');
       addTearDown(() async {
         if (tempDir.existsSync()) await tempDir.delete(recursive: true);
       });

@@ -44,3 +44,13 @@ serverpod:
       posix: |
         cd ../pokebattle_serverpod_flutter
         flutter build web --base-href /app/ --wasm --output ../pokebattle_serverpod_server/web/app
+
+dependency_overrides:
+# dev_mate* no está publicado y testeador_base lo resuelve con overrides
+# internos que NO viajan al consumidor: hay que repetirlos acá.
+  dev_mate:
+    path: ../../../../../../packages/dev_mate/packages/dev_mate
+  dev_mate_client:
+    path: ../../../../../../packages/dev_mate/packages/dev_mate_client
+  dev_mate_mcp:
+    path: ../../../../../../packages/dev_mate/packages/dev_mate_mcp

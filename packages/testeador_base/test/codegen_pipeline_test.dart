@@ -76,7 +76,10 @@ void main() {
         sourceRelativePath: 'test/alpha_test.dart',
       );
       expect(result.skipped, isFalse);
-      expect(result.source, contains("import 'package:testeador_base/captured.dart'"));
+      expect(
+        result.source,
+        contains("import 'package:testeador_base/captured.dart'"),
+      );
       expect(result.source, isNot(contains("import 'package:test/test.dart'")));
       expect(result.source, contains(result.entryPointName));
       expect(result.source, contains(r'const $entry ='));
@@ -121,8 +124,7 @@ void main() {
 
   group('identifier_naming', () {
     test('camelCases names and folds Latin diacritics', () {
-      expect(toLowerCamelCase('crea un usuario válido'),
-          'creaUnUsuarioValido');
+      expect(toLowerCamelCase('crea un usuario válido'), 'creaUnUsuarioValido');
       expect(toLowerCamelCase('GET /users/:id'), 'getUsersId');
       expect(toLowerCamelCase('  spaced   words  '), 'spacedWords');
       expect(toLowerCamelCase(''), '');
@@ -154,8 +156,14 @@ void main() {
       ];
 
       final result = generateTestInjector(manifests: manifests);
-      expect(result.source, contains("import 'package:testeador_base/codegen.dart'"));
-      expect(result.source, contains("import 'package:demo_pkg/src/_testeador/"));
+      expect(
+        result.source,
+        contains("import 'package:testeador_base/codegen.dart'"),
+      );
+      expect(
+        result.source,
+        contains("import 'package:demo_pkg/src/_testeador/"),
+      );
       expect(result.source, contains('abstract final class TestInjector'));
       expect(result.source, contains('creaUnUsuarioValido'));
       expect(result.source, contains('rechazaEmailInvalido'));

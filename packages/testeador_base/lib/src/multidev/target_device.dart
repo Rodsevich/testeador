@@ -102,8 +102,10 @@ final class AndroidEmulator extends TargetDevice {
       );
     }
     await Process.start(emulatorPath, [
-      '-avd', avdName!,
-      '-port', _portFromSerial(serial).toString(),
+      '-avd',
+      avdName!,
+      '-port',
+      _portFromSerial(serial).toString(),
       if (headless) ...['-no-window', '-no-audio', '-no-snapshot'],
     ]);
     await _waitForBootCompleted();
@@ -153,15 +155,18 @@ final class AndroidEmulator extends TargetDevice {
 
   Future<bool> _isBooted() async {
     final r = await Process.run(adbPath, ['-s', serial, 'get-state']);
-    return r.exitCode == 0 &&
-        (r.stdout as String).trim() == 'device';
+    return r.exitCode == 0 && (r.stdout as String).trim() == 'device';
   }
 
   Future<void> _waitForBootCompleted() async {
     final deadline = DateTime.now().add(const Duration(minutes: 3));
     while (DateTime.now().isBefore(deadline)) {
       final r = await Process.run(adbPath, [
-        '-s', serial, 'shell', 'getprop', 'sys.boot_completed',
+        '-s',
+        serial,
+        'shell',
+        'getprop',
+        'sys.boot_completed',
       ]);
       if (r.exitCode == 0 && (r.stdout as String).trim() == '1') return;
       await Future<void>.delayed(const Duration(seconds: 2));
@@ -201,10 +206,12 @@ final class IosSimulator extends TargetDevice {
   @override
   Future<void> boot() async {
     final r = await Process.run('xcrun', ['simctl', 'boot', udid]);
-    if (r.exitCode != 0 &&
-        !(r.stderr as String).contains('Booted')) {
+    if (r.exitCode != 0 && !(r.stderr as String).contains('Booted')) {
       throw ProcessException(
-        'xcrun', ['simctl', 'boot', udid], r.stderr as String, r.exitCode,
+        'xcrun',
+        ['simctl', 'boot', udid],
+        r.stderr as String,
+        r.exitCode,
       );
     }
   }
@@ -334,12 +341,12 @@ final class WebDevice extends TargetDevice {
 
   @override
   List<String> patrolExtraArgs() => [
-        '--web-headless',
-        '$webHeadless',
-        // patrol_cli expects a JSON object here, not `WxH`.
-        '--web-viewport',
-        '{"width": $width, "height": $height}',
-      ];
+    '--web-headless',
+    '$webHeadless',
+    // patrol_cli expects a JSON object here, not `WxH`.
+    '--web-viewport',
+    '{"width": $width, "height": $height}',
+  ];
 
   /// Full URL captured by the next [screenshot] (`baseUrl` + `route`).
   String get currentUrl {

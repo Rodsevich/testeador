@@ -37,7 +37,10 @@ void main() {
       final out = emitter.emit(
         gapFor(exchange(responseBody: '{"id":"1","name":"x"}')),
       );
-      expect(out, contains("import 'package:testeador_base/testeador_base.dart';"));
+      expect(
+        out,
+        contains("import 'package:testeador_base/testeador_base.dart';"),
+      );
       expect(out, contains("import 'package:testeador_base/expect.dart';"));
       expect(out, isNot(contains('vm_service')));
       expect(out, isNot(contains('marionette')));

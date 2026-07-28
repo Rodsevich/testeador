@@ -61,8 +61,7 @@ String emitInjectedFlow(InjectedFlowSpec spec) {
   if (spec.picked.isEmpty) {
     throw ArgumentError('emitInjectedFlow: no tests selected.');
   }
-  final tags =
-      spec.overrideTags ?? {for (final e in spec.picked) ...e.tags};
+  final tags = spec.overrideTags ?? {for (final e in spec.picked) ...e.tags};
   final sortedTags = tags.toList()..sort();
   final tagsLiteral = sortedTags.isEmpty
       ? '<String>{}'

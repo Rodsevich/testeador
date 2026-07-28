@@ -53,9 +53,7 @@ class CapturedTest {
   /// the test is not nested in any group.
   String get fqId {
     final groups = groupChain.join('/');
-    return groups.isEmpty
-        ? '$packageName:$name'
-        : '$packageName:$groups/$name';
+    return groups.isEmpty ? '$packageName:$name' : '$packageName:$groups/$name';
   }
 
   /// Materializes this snapshot as a `TestStep` that runs setUps → body →

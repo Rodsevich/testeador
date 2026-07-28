@@ -68,17 +68,16 @@ List<String> patrolCommandFor(
   String target, {
   String? flavor,
   List<String> extraArgs = const [],
-}) =>
-    [
-      'test',
-      '--target',
-      target,
-      '--device',
-      device.patrolDeviceId,
-      if (flavor != null) ...['--flavor', flavor],
-      ...extraArgs,
-      ...device.patrolExtraArgs(),
-    ];
+}) => [
+  'test',
+  '--target',
+  target,
+  '--device',
+  device.patrolDeviceId,
+  if (flavor != null) ...['--flavor', flavor],
+  ...extraArgs,
+  ...device.patrolExtraArgs(),
+];
 
 /// {@template patrol_result}
 /// Outcome of one `patrol test` subprocess for one device.
@@ -108,6 +107,7 @@ class PatrolResult {
   bool get passed => exitCode == 0;
 
   @override
-  String toString() => 'PatrolResult(${device.id}, exit=$exitCode, '
+  String toString() =>
+      'PatrolResult(${device.id}, exit=$exitCode, '
       'passed=$passed)';
 }

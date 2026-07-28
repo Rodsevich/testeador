@@ -39,8 +39,7 @@ class DeviceFleet {
   Future<void> bootAll() => Future.wait(devices.map((d) => d.boot()));
 
   /// Shuts down every device in parallel.
-  Future<void> shutdownAll() =>
-      Future.wait(devices.map((d) => d.shutdown()));
+  Future<void> shutdownAll() => Future.wait(devices.map((d) => d.shutdown()));
 
   /// Captures one PNG per device under `evidence/<label>/`.
   ///
@@ -51,15 +50,17 @@ class DeviceFleet {
     final dir = Directory('$evidenceDir/$label')..createSync(recursive: true);
     final ts = DateTime.now().toUtc().toIso8601String();
 
-    final shots = await Future.wait(devices.map((d) async {
-      final out = File('${dir.path}/${d.platform}-${d.id}.png');
-      await d.screenshot(out);
-      return DeviceShot(
-        device: d,
-        file: out,
-        capturedAtMs: DateTime.now().millisecondsSinceEpoch,
-      );
-    }));
+    final shots = await Future.wait(
+      devices.map((d) async {
+        final out = File('${dir.path}/${d.platform}-${d.id}.png');
+        await d.screenshot(out);
+        return DeviceShot(
+          device: d,
+          file: out,
+          capturedAtMs: DateTime.now().millisecondsSinceEpoch,
+        );
+      }),
+    );
 
     final times = shots.map((s) => s.capturedAtMs).toList()..sort();
     final skewMs = times.isEmpty ? 0 : times.last - times.first;
@@ -103,17 +104,19 @@ class DeviceFleet {
     String? flavor,
     List<String> extraArgs = const [],
   }) {
-    return Future.wait(devices.map((d) {
-      final env = envPerDevice[d.id] ?? const <String, String>{};
-      return PatrolRunner.runOn(
-        d,
-        target: target,
-        flavor: flavor,
-        extraArgs: extraArgs,
-        env: env,
-        workingDirectory: workingDirectory,
-      );
-    }));
+    return Future.wait(
+      devices.map((d) {
+        final env = envPerDevice[d.id] ?? const <String, String>{};
+        return PatrolRunner.runOn(
+          d,
+          target: target,
+          flavor: flavor,
+          extraArgs: extraArgs,
+          env: env,
+          workingDirectory: workingDirectory,
+        );
+      }),
+    );
   }
 
   /// Spawns `patrol test --target <target> --device <id>` for ONE device.
@@ -126,15 +129,14 @@ class DeviceFleet {
     Map<String, String> env = const {},
     String? flavor,
     List<String> extraArgs = const [],
-  }) =>
-      PatrolRunner.runOn(
-        device,
-        target: target,
-        flavor: flavor,
-        extraArgs: extraArgs,
-        env: env,
-        workingDirectory: workingDirectory,
-      );
+  }) => PatrolRunner.runOn(
+    device,
+    target: target,
+    flavor: flavor,
+    extraArgs: extraArgs,
+    env: env,
+    workingDirectory: workingDirectory,
+  );
 
   /// Pulls [remotePath] from every device into
   /// `<evidenceDir>/<label>/<platform>-<id>/` — recupera archivos que un agent
@@ -145,18 +147,20 @@ class DeviceFleet {
     required String remotePath,
     required String label,
   }) async {
-    await Future.wait(devices.map((d) async {
-      final dir = Directory('$evidenceDir/$label/${d.platform}-${d.id}');
-      try {
-        await d.pull(remotePath, dir);
-        // pull no soportado (web/iOS) es esperado; toleramos por plataforma.
-        // ignore: avoid_catching_errors
-      } on UnsupportedError {
-        // Sin sistema de archivos que pullear (web/iOS): se saltea.
-      } on ProcessException {
-        // No hay artefactos que bajar (el flow no escribió ninguno): la
-        // recuperación es best-effort, no tumba el flujo.
-      }
-    }));
+    await Future.wait(
+      devices.map((d) async {
+        final dir = Directory('$evidenceDir/$label/${d.platform}-${d.id}');
+        try {
+          await d.pull(remotePath, dir);
+          // pull no soportado (web/iOS) es esperado; toleramos por plataforma.
+          // ignore: avoid_catching_errors
+        } on UnsupportedError {
+          // Sin sistema de archivos que pullear (web/iOS): se saltea.
+        } on ProcessException {
+          // No hay artefactos que bajar (el flow no escribió ninguno): la
+          // recuperación es best-effort, no tumba el flujo.
+        }
+      }),
+    );
   }
 }

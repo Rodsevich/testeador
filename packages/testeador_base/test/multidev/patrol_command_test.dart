@@ -23,8 +23,14 @@ void main() {
           extraArgs: const ['--no-uninstall'],
         ),
         [
-          'test', '--target', target, '--device', 'emulator-5554',
-          '--flavor', 'dev', '--no-uninstall',
+          'test',
+          '--target',
+          target,
+          '--device',
+          'emulator-5554',
+          '--flavor',
+          'dev',
+          '--no-uninstall',
         ],
       );
     });
@@ -35,12 +41,25 @@ void main() {
         chromePath: '/bin/true',
       );
       expect(
-        patrolCommandFor(device, target, flavor: 'stg', extraArgs: const ['-v']),
+        patrolCommandFor(
+          device,
+          target,
+          flavor: 'stg',
+          extraArgs: const ['-v'],
+        ),
         [
-          'test', '--target', target, '--device', 'chrome',
-          '--flavor', 'stg', '-v',
-          '--web-headless', 'true',
-          '--web-viewport', '{"width": 1280, "height": 900}',
+          'test',
+          '--target',
+          target,
+          '--device',
+          'chrome',
+          '--flavor',
+          'stg',
+          '-v',
+          '--web-headless',
+          'true',
+          '--web-viewport',
+          '{"width": 1280, "height": 900}',
         ],
       );
     });
@@ -104,8 +123,10 @@ void main() {
 
   group('TargetDevice patrol selectors', () {
     test('Android/iOS expose no extra patrol args', () {
-      expect(const AndroidEmulator(serial: 'emulator-5554').patrolExtraArgs(),
-          isEmpty);
+      expect(
+        const AndroidEmulator(serial: 'emulator-5554').patrolExtraArgs(),
+        isEmpty,
+      );
       expect(const IosSimulator(udid: 'udid').patrolExtraArgs(), isEmpty);
     });
 

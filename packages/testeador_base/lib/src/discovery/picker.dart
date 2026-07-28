@@ -43,9 +43,7 @@ class DiscoveredEntry {
   /// enclosing groups. Mirrors [CapturedTest.fqId].
   String get fqId {
     final groups = groupChain.join('/');
-    return groups.isEmpty
-        ? '$packageName:$name'
-        : '$packageName:$groups/$name';
+    return groups.isEmpty ? '$packageName:$name' : '$packageName:$groups/$name';
   }
 
   /// JSON-friendly representation used by the CLI/MCP layers.
@@ -70,11 +68,12 @@ class DiscoveredEntry {
 class DiscoveredCatalog {
   /// Builds a catalog from a list of parsed manifests.
   factory DiscoveredCatalog.fromManifests(List<FileManifest> manifests) {
-    final sorted = [...manifests]..sort((a, b) {
-      final byPkg = a.packageName.compareTo(b.packageName);
-      if (byPkg != 0) return byPkg;
-      return a.sourceRelativePath.compareTo(b.sourceRelativePath);
-    });
+    final sorted = [...manifests]
+      ..sort((a, b) {
+        final byPkg = a.packageName.compareTo(b.packageName);
+        if (byPkg != 0) return byPkg;
+        return a.sourceRelativePath.compareTo(b.sourceRelativePath);
+      });
     final namer = IdentifierNamer();
     final entries = <DiscoveredEntry>[];
     final seen = <String>{};

@@ -40,24 +40,30 @@ void main() {
 
       test('strips a trailing slash on baseUrl', () {
         expect(
-          WebDevice(baseUrl: 'http://localhost:5000/', route: '/players')
-              .currentUrl,
+          WebDevice(
+            baseUrl: 'http://localhost:5000/',
+            route: '/players',
+          ).currentUrl,
           'http://localhost:5000/players',
         );
       });
 
       test('adds a leading slash to a route missing one', () {
         expect(
-          WebDevice(baseUrl: 'http://localhost:5000', route: 'battles')
-              .currentUrl,
+          WebDevice(
+            baseUrl: 'http://localhost:5000',
+            route: 'battles',
+          ).currentUrl,
           'http://localhost:5000/battles',
         );
       });
 
       test('does not double-slash when both sides carry one', () {
         expect(
-          WebDevice(baseUrl: 'http://localhost:5000/', route: '/battles')
-              .currentUrl,
+          WebDevice(
+            baseUrl: 'http://localhost:5000/',
+            route: '/battles',
+          ).currentUrl,
           'http://localhost:5000/battles',
         );
       });

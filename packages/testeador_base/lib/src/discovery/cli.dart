@@ -92,15 +92,15 @@ Future<int> runDiscoverCli(List<String> args) async {
       ? FlowKind.transient
       : FlowKind.lasting;
   final overrideTagsArg = results['flow-tags'] as String?;
-  final overrideTags = overrideTagsArg?.split(',')
+  final overrideTags = overrideTagsArg
+      ?.split(',')
       .map((s) => s.trim())
       .where((s) => s.isNotEmpty)
       .toSet();
   final spec = InjectedFlowSpec(
     picked: picked,
     flowName: (results['flow-name'] as String?) ?? _defaultFlowName,
-    flowFunction:
-        (results['flow-function'] as String?) ?? _defaultFlowFunction,
+    flowFunction: (results['flow-function'] as String?) ?? _defaultFlowFunction,
     consumerPackageName: consumerName,
     kind: kind,
     description: results['description'] as String?,
@@ -208,9 +208,7 @@ String discoverUsage(ArgParser parser) =>
     'Usage: testeador discover [options]\n\n${parser.usage}';
 
 Directory? _resolveRoot(String? explicit) {
-  final candidate = explicit == null
-      ? Directory.current
-      : Directory(explicit);
+  final candidate = explicit == null ? Directory.current : Directory(explicit);
   if (!candidate.existsSync()) {
     stderr.writeln(
       'testeador discover: --package ${candidate.path} not found.',

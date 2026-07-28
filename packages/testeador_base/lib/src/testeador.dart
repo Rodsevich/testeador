@@ -1,9 +1,6 @@
 import 'dart:io';
 
 import 'package:args/args.dart';
-//  y NO : es la capa que  también usa,
-// así este paquete puede ser dependencia de uno Flutter. Con 
-// en lib/ la resolución falla (flutter_test pinea test_api 0.7.11).
 // test_api y NO package:test: es la capa de scaffolding que flutter_test
 // también usa, así este paquete puede ser dependencia de uno Flutter. Con
 // package:test en lib/ la resolución falla — flutter_test pinea test_api

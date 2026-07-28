@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
-import 'evidence_file_system.dart';
-import 'naming.dart';
+import 'package:testeador_base/src/evidence/evidence_file_system.dart';
+import 'package:testeador_base/src/evidence/naming.dart';
 
 /// {@template run_manifest}
 /// The structural source of truth of an evidence run, written incrementally

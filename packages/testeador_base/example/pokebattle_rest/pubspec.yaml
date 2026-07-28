@@ -20,6 +20,14 @@ dev_dependencies:
   very_good_analysis: ^6.0.0
 
 dependency_overrides:
+# dev_mate* no está publicado y testeador_base lo resuelve con overrides
+# internos que NO viajan al consumidor: hay que repetirlos acá.
+  dev_mate:
+    path: ../../../../../packages/dev_mate/packages/dev_mate
+  dev_mate_client:
+    path: ../../../../../packages/dev_mate/packages/dev_mate_client
+  dev_mate_mcp:
+    path: ../../../../../packages/dev_mate/packages/dev_mate_mcp
   test: ^1.31.0
   test_api: ^0.7.12
   test_core: ^0.6.18

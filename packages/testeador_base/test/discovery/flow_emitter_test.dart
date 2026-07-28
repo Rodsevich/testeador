@@ -110,8 +110,7 @@ DiscoveredCatalog _catalogWith(List<DiscoveredTest> tests) {
     FileManifest(
       packageName: 'demo',
       sourceRelativePath: 'test/demo_test.dart',
-      transformedImport:
-          'package:demo/src/_testeador/demo_test.testeador.dart',
+      transformedImport: 'package:demo/src/_testeador/demo_test.testeador.dart',
       entryPointName: r'_testeadorCapture$demo',
       tests: tests,
     ),

@@ -126,9 +126,10 @@ Future<int> _readDevtoolsPort(Directory profile, Duration timeout) async {
   final deadline = DateTime.now().add(timeout);
   while (DateTime.now().isBefore(deadline)) {
     if (file.existsSync()) {
-      final firstLine =
-          file.readAsLinesSync().firstWhere((l) => l.trim().isNotEmpty,
-              orElse: () => '');
+      final firstLine = file.readAsLinesSync().firstWhere(
+        (l) => l.trim().isNotEmpty,
+        orElse: () => '',
+      );
       final port = int.tryParse(firstLine.trim());
       if (port != null) return port;
     }
@@ -146,8 +147,9 @@ Future<String> _pageWebSocketUrl(int port, Duration timeout) async {
     final deadline = DateTime.now().add(timeout);
     while (DateTime.now().isBefore(deadline)) {
       try {
-        final req =
-            await client.getUrl(Uri.parse('http://127.0.0.1:$port/json'));
+        final req = await client.getUrl(
+          Uri.parse('http://127.0.0.1:$port/json'),
+        );
         final resp = await req.close();
         final body = await resp.transform(utf8.decoder).join();
         final targets = (jsonDecode(body) as List).cast<Map<String, dynamic>>();
@@ -173,21 +175,25 @@ Future<String> _pageWebSocketUrl(int port, Duration timeout) async {
 /// Minimal CDP client: correlates `{id}` responses, ignores events.
 class _Cdp {
   _Cdp(this._ws) {
-    _ws.listen((dynamic data) {
-      final msg = jsonDecode(data as String) as Map<String, dynamic>;
-      final id = msg['id'];
-      if (id is int) {
-        final completer = _pending.remove(id);
-        if (completer == null) return;
-        if (msg['error'] != null) {
-          completer.completeError(StateError('CDP error: ${msg['error']}'));
-        } else {
-          completer.complete(
-            (msg['result'] as Map?)?.cast<String, dynamic>() ?? const {},
-          );
+    _ws.listen(
+      (dynamic data) {
+        final msg = jsonDecode(data as String) as Map<String, dynamic>;
+        final id = msg['id'];
+        if (id is int) {
+          final completer = _pending.remove(id);
+          if (completer == null) return;
+          if (msg['error'] != null) {
+            completer.completeError(StateError('CDP error: ${msg['error']}'));
+          } else {
+            completer.complete(
+              (msg['result'] as Map?)?.cast<String, dynamic>() ?? const {},
+            );
+          }
         }
-      }
-    }, onError: (Object _) {}, cancelOnError: false);
+      },
+      onError: (Object _) {},
+      cancelOnError: false,
+    );
   }
 
   final WebSocket _ws;
@@ -201,11 +207,13 @@ class _Cdp {
     final id = ++_nextId;
     final completer = Completer<Map<String, dynamic>>();
     _pending[id] = completer;
-    _ws.add(jsonEncode({
-      'id': id,
-      'method': method,
-      'params': ?params,
-    }));
+    _ws.add(
+      jsonEncode({
+        'id': id,
+        'method': method,
+        'params': ?params,
+      }),
+    );
     return completer.future.timeout(const Duration(seconds: 30));
   }
 }

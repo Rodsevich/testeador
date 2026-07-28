@@ -99,8 +99,7 @@ TransformResult transformTestSource({
         throw _TransformError('no top-level main() in $sourceRelativePath'),
   );
 
-  final entryName =
-      '_testeadorCapture\$${_safeId(sourceRelativePath)}';
+  final entryName = '_testeadorCapture\$${_safeId(sourceRelativePath)}';
   edits.add(
     _Edit(
       start: mainFn.name.offset,
