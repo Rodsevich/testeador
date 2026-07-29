@@ -1,7 +1,7 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:patrol_finders/patrol_finders.dart';
+import 'package:path/path.dart' as p;
 import 'package:testeador_base/testeador_base.dart';
 import 'package:testeador/src/registrable_flow.dart';
 import 'package:testeador/src/ui_actor.dart';
@@ -117,6 +117,13 @@ final class UiTestFlow<T> implements ActorDrivenFlow<T> {
     );
     final $ = PatrolTester(tester: tester, config: patrolConfig);
 
+    // Enchufar el interceptor antes de que el actor abra su sesión, igual que
+    // hace `Testeador` con los flujos de contrato: sin esto el log queda vacío
+    // y el dump de curls al fallar no tendría nada que volcar.
+    if (!actor.dio.interceptors.contains(actor.curlInterceptor)) {
+      actor.dio.interceptors.add(actor.curlInterceptor);
+    }
+
     final app = await tester.runAsync(() => actor.session(world));
     await recorder.pump(tester, app!(), wrapInMaterialApp: false);
 
@@ -142,6 +149,7 @@ final class UiTestFlow<T> implements ActorDrivenFlow<T> {
         } on Object catch (error, stackTrace) {
           stepFailure = error;
           stepStackTrace = stackTrace;
+          _dumpCurls(recorder, actor, step.description);
           await recorder.photoCrash(
             tester,
             name: step.description,
@@ -169,5 +177,35 @@ final class UiTestFlow<T> implements ActorDrivenFlow<T> {
     if (stepFailure != null) {
       Error.throwWithStackTrace(stepFailure, stepStackTrace!);
     }
+  }
+
+  /// Vuelca los curls del actor cuando un paso falla, y los adjunta al paso en
+  /// el manifest.
+  ///
+  /// Es el input #4 del juez (`docs/verdict-agent.md`): correlacionar lo que
+  /// hizo el backend con lo que muestra la pantalla, justo cuando importa. Un
+  /// actor que no llama APIs no escribe nada.
+  ///
+  /// Vuelca **toda** la traza acumulada, no sólo la del paso que explotó: lo
+  /// que hizo la sesión al abrirse (un login, un seed remoto) suele ser
+  /// justamente lo que explica el fallo, y recortarla escondería la causa.
+  void _dumpCurls(EvidenceRecorder recorder, UiActor<T> actor, String step) {
+    final log = actor.curlInterceptor.log;
+    if (log.isEmpty) return;
+    final relative = p.join(
+      'http',
+      '${slugify(actor.name)}-${slugify(step)}.curl',
+    );
+    try {
+      _fs.writeStringAtomic(
+        p.join(recorder.runDir, relative),
+        '${log.join('\n\n')}\n',
+      );
+    } on Object {
+      // La evidencia visual del crash vale más que sus curls: si el disco
+      // falla acá, no se tapa la excepción del paso.
+      return;
+    }
+    recorder.attach(step: step, type: 'http', file: relative);
   }
 }

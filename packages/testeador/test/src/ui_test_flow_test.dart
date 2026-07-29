@@ -22,9 +22,8 @@ class _MiniApp extends StatelessWidget {
             child: ElevatedButton(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (_) => const Scaffold(
-                    body: Center(child: Text('Detalle')),
-                  ),
+                  builder: (_) =>
+                      const Scaffold(body: Center(child: Text('Detalle'))),
                 ),
               ),
               child: const Text('Ver detalle'),
@@ -49,6 +48,23 @@ final class _MiniActor extends UiActor<_World> {
   @override
   Future<Widget Function()> session(_World world) async =>
       () => const _MiniApp();
+}
+
+/// Actor que llama a una API durante su sesión: el interceptor registra el
+/// curl aunque la request falle (flutter_test bloquea la red).
+final class _ActorConTrafico extends UiActor<_World> {
+  _ActorConTrafico(String name) : super(name: name);
+
+  @override
+  Future<Widget Function()> session(_World world) async {
+    try {
+      await dio.get<void>('http://127.0.0.1:1/pedido');
+    } on Object {
+      // La request no puede completarse en un widget test; lo que importa es
+      // que el interceptor ya la anotó.
+    }
+    return () => const _MiniApp();
+  }
 }
 
 final class _UiFixture extends Fixture<_World> {
@@ -105,9 +121,7 @@ void main() {
     test('an entry with actor-driven flows and no actors fails loudly', () {
       final entry = TestSuite.entry<_World>(
         fixture: _UiFixture(),
-        flows: [
-          UiTestFlow<_World>(name: 'sin_actores', steps: const []),
-        ],
+        flows: [UiTestFlow<_World>(name: 'sin_actores', steps: const [])],
       );
       expect(entry.register, throwsArgumentError);
     });
@@ -264,9 +278,7 @@ void main() {
       final flow = UiTestFlow<_World>(
         name: 'huerfanos',
         config: config(),
-        steps: [
-          (description: 'home', intent: 'i', body: (_, _) async {}),
-        ],
+        steps: [(description: 'home', intent: 'i', body: (_, _) async {})],
       );
       await flow.execute(
         tester,
@@ -286,6 +298,84 @@ void main() {
         manifest['orphanedBaselines'],
         equals(['comprador-renombrado.png']),
       );
+    });
+  });
+
+  group('curls del paso que falló', () {
+    testWidgets(
+      'un paso que explota deja sus curls adjuntos en el manifest, y el juez '
+      'los ve junto a la captura del crash',
+      (tester) async {
+        final actor = _ActorConTrafico('comprador');
+        final flow = UiTestFlow<_World>(
+          name: 'con_trafico',
+          config: config(),
+          steps: [
+            (
+              description: 'explota',
+              intent: 'la pantalla no debería explotar',
+              body: (_, _) async => throw StateError('la API dijo que no'),
+            ),
+          ],
+        );
+
+        await expectLater(
+          () => flow.execute(tester, const _World(), actor: actor),
+          throwsStateError,
+        );
+
+        final runDir = scenarioRunDir(
+          baseDir: tmp.path,
+          scenario: 'con_trafico',
+        );
+        final curls = File(p.join(runDir, 'http', 'comprador-explota.curl'));
+        expect(
+          curls.existsSync(),
+          isTrue,
+          reason: 'el dump es el input #4 del contrato de veredicto',
+        );
+        expect(curls.readAsStringSync(), contains('127.0.0.1:1/pedido'));
+
+        final steps =
+            (jsonDecode(
+                      File(
+                        p.join(runDir, 'comprador.manifest.json'),
+                      ).readAsStringSync(),
+                    )
+                    as Map<String, Object?>)['steps']!
+                as List<Object?>;
+        final att =
+            (steps.single! as Map<String, Object?>)['attachments']!
+                as Map<String, Object?>;
+        expect(
+          (att['http']! as List).single,
+          contains('comprador-explota.curl'),
+        );
+      },
+    );
+
+    testWidgets('un actor que no llama APIs no escribe ningún curl', (
+      tester,
+    ) async {
+      final flow = UiTestFlow<_World>(
+        name: 'sin_trafico',
+        config: config(),
+        steps: [
+          (
+            description: 'explota',
+            intent: 'x',
+            body: (_, _) async => throw StateError('sin red de por medio'),
+          ),
+        ],
+      );
+
+      await expectLater(
+        () => flow.execute(tester, const _World(), actor: _MiniActor('mudo')),
+        throwsStateError,
+      );
+
+      final runDir = scenarioRunDir(baseDir: tmp.path, scenario: 'sin_trafico');
+      expect(Directory(p.join(runDir, 'http')).existsSync(), isFalse);
     });
   });
 

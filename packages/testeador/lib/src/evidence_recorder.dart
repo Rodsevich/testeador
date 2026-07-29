@@ -301,6 +301,11 @@ final class EvidenceRecorder {
       status: 'failed',
       intent: intent,
       capture: captureName,
+      // Los accesorios del paso que FALLÓ son los que más importan: son lo que
+      // le permite al juez explicar el crash (input #4 del contrato). Sin esto
+      // se escribían en disco y quedaban huérfanos del manifest.
+      attachments: _pendingAttachments.remove(slug) ?? const {},
+      missingAttachments: _pendingMissing.remove(slug) ?? const [],
       exception: exception.toString(),
     );
   }
