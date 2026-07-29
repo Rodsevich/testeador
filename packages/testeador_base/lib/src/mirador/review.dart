@@ -348,14 +348,20 @@ final class Mark {
   /// Reconstruye desde el JSON que manda el panel.
   factory Mark.fromJson(Map<String, Object?> json) => Mark(
     brushId: (json['brush'] as String?) ?? '',
-    rect: (json['rect'] as List<Object?>? ?? const [])
-        .map((e) => (e as num).toDouble())
+    rect: ((json['rect'] as List<Object?>?) ?? const <Object?>[])
+        .whereType<num>()
+        .map((e) => e.toDouble())
         .toList(growable: false),
     note: json['note'] as String?,
-    points: (json['points'] as List<Object?>? ?? const [])
+    points: ((json['points'] as List<Object?>?) ?? const <Object?>[])
         .whereType<List<Object?>>()
         .map(
-          (pt) => pt.map((e) => (e as num).toDouble()).toList(growable: false),
+          (pt) => pt
+              .whereType<num>()
+              .map((e) => e.toDouble())
+              .toList(
+                growable: false,
+              ),
         )
         .toList(growable: false),
   );

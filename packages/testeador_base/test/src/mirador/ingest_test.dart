@@ -207,6 +207,56 @@ void main() {
     );
   });
 
+  test(
+    'el steps.json del device manda: su intent pisa el que pase quien ingesta',
+    () {
+      shot('01-hodie.png');
+      File(p.join(src, 'steps.json')).writeAsStringSync(
+        jsonEncode({
+          'flow': 'f9-flujo',
+          'origin': 'patrol',
+          'steps': [
+            {
+              'order': 1,
+              'label': 'hodie',
+              'intent': 'lo que el paso declaró en el device',
+              'status': 'ok',
+            },
+          ],
+        }),
+      );
+
+      ingestPatrolRun(
+        sourceDir: src,
+        baseDir: base,
+        scenario: 'f9-flujo',
+        actor: 'novicio',
+        intents: const {'hodie': 'lo que inventó quien ingesta'},
+      );
+
+      final steps =
+          manifestOf('f9_flujo', 'novicio')['steps']! as List<Object?>;
+      expect(
+        (steps.first! as Map<String, Object?>)['intent'],
+        'lo que el paso declaró en el device',
+        reason: 'el paso es el dueño de su contrato',
+      );
+    },
+  );
+
+  test('un steps.json ilegible no impide ingerir las capturas', () {
+    shot('01-hodie.png');
+    File(p.join(src, 'steps.json')).writeAsStringSync('{roto');
+
+    final r = ingestPatrolRun(
+      sourceDir: src,
+      baseDir: base,
+      scenario: 'f9-flujo',
+      actor: 'novicio',
+    );
+    expect(r.captures, 1);
+  });
+
   test('un directorio inexistente falla con un mensaje accionable', () {
     expect(
       () => ingestPatrolRun(

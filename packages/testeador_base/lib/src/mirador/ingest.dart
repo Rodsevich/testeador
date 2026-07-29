@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:image/image.dart' as img;
@@ -47,8 +48,8 @@ final class IngestResult {
 ///
 /// **Se parea por label, nunca por el prefijo `NN-`**: ese número es el
 /// contador de capturas efectivamente escritas, no el índice del paso, así que
-/// se corre solo con que un shot condicional no dispare. El orden se toma del número
-/// para mostrar, pero la identidad del paso es el slug.
+/// se corre solo con que un shot condicional no dispare. El orden se toma del
+/// número para mostrar, pero la identidad del paso es el slug.
 IngestResult ingestPatrolRun({
   required String sourceDir,
   required String baseDir,
@@ -61,6 +62,11 @@ IngestResult ingestPatrolRun({
   if (!src.existsSync()) {
     throw ArgumentError('no existe el directorio de evidencia: $sourceDir');
   }
+
+  // Los intents que el flujo declaró en el device pesan más que los que venga
+  // a inventar quien ingesta: el paso es el dueño de su contrato.
+  final declarados = _declaredIntents(src);
+  final efectivos = <String, String>{...intents, ...declarados};
 
   final pngs =
       src
@@ -169,7 +175,7 @@ IngestResult ingestPatrolRun({
       slug: slug,
       description: label,
       status: 'ok',
-      intent: intents[label] ?? intents[slug],
+      intent: efectivos[label] ?? efectivos[slug],
       capture: captureName,
       baseline: baseline == null
           ? null
@@ -189,6 +195,30 @@ IngestResult ingestPatrolRun({
     drifted: drifted,
     brandNew: brandNew,
   );
+}
+
+/// Levanta los intents del `steps.json` que `shots.dart` deja junto a los PNG
+/// en el device. Sin ese archivo (corridas viejas), devuelve vacío.
+Map<String, String> _declaredIntents(Directory src) {
+  final out = <String, String>{};
+  for (final f in src.listSync(recursive: true).whereType<File>()) {
+    if (p.basename(f.path) != 'steps.json') continue;
+    try {
+      final doc = jsonDecode(f.readAsStringSync()) as Map<String, Object?>;
+      for (final raw in (doc['steps'] as List<Object?>? ?? const [])) {
+        if (raw is! Map<String, Object?>) continue;
+        final label = raw['label'];
+        final intent = raw['intent'];
+        if (label is String && intent is String && intent.isNotEmpty) {
+          out[label] = intent;
+        }
+      }
+    } on Object {
+      // Un índice ilegible no debe impedir ingerir las capturas.
+      continue;
+    }
+  }
+  return out;
 }
 
 /// `03-opus-dies.png` → `opus-dies`. Devuelve `null` si no matchea el patrón.

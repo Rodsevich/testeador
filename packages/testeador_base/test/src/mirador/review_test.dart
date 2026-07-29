@@ -177,7 +177,7 @@ void main() {
       final item = loadQueue(baseDir: base).single;
       expect(item.variants, hasLength(3));
       expect(
-        item.variants.map((v) => p.basename(v)),
+        item.variants.map(p.basename),
         equals(['01-titular.png', '02-card.png', '03-banda.png']),
       );
       expect(item.variants.every(p.isAbsolute), isTrue);

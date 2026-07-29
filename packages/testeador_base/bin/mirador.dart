@@ -13,58 +13,59 @@ import 'package:testeador_base/mirador.dart';
 /// ```
 Future<void> main(List<String> argv) async {
   final root = ArgParser()
-    ..addFlag('help', abbr: 'h', negatable: false, help: 'Esta ayuda.');
-
-  root..addCommand(
-    'ingest',
-    ArgParser()
-      ..addOption(
-        'from',
-        help: 'Directorio que dejó pullArtifacts (busca PNG recursivamente).',
-        mandatory: true,
-      )
-      ..addOption('base-dir', defaultsTo: 'test_evidence')
-      ..addOption('scenario', help: 'Nombre del flujo.', mandatory: true)
-      ..addOption(
-        'actor',
-        help: 'Persona. Por defecto, lo que sigue al último "-" del scenario.',
-      )
-      ..addOption(
-        'intents',
-        help: 'JSON {label: intent} para las capturas que aún no lo declaran.',
-      ),
-  );
-
-  root.addCommand(
-    'review',
-    ArgParser()
-      ..addOption('base-dir', defaultsTo: 'test_evidence')
-      ..addOption('port', defaultsTo: '4771')
-      ..addFlag(
-        'once',
-        defaultsTo: true,
-        help: 'Cerrar al recibir el veredicto (el modo del loop de trabajo).',
-      )
-      ..addFlag(
-        'all',
-        help: 'Incluir también las capturas sin cambios.',
-      )
-      ..addOption(
-        'propose',
-        help:
-            'JSON {"<scenario>/<actor>/<slug>": {"verdict":…,"rationale":…}} '
-            'con el pre-juicio del agente.',
-      ),
-  );
-
-  root.addCommand(
-    'promote',
-    ArgParser()
-      ..addOption('base-dir', defaultsTo: 'test_evidence')
-      ..addOption('scenario', mandatory: true)
-      ..addOption('actor', mandatory: true)
-      ..addOption('slugs', help: 'Lista separada por comas.', mandatory: true),
-  );
+    ..addFlag('help', abbr: 'h', negatable: false, help: 'Esta ayuda.')
+    ..addCommand(
+      'ingest',
+      ArgParser()
+        ..addOption(
+          'from',
+          help: 'Directorio que dejó pullArtifacts (busca PNG recursivamente).',
+          mandatory: true,
+        )
+        ..addOption('base-dir', defaultsTo: 'test_evidence')
+        ..addOption('scenario', help: 'Nombre del flujo.', mandatory: true)
+        ..addOption(
+          'actor',
+          help:
+              'Persona. Por defecto, lo que sigue al último "-" del scenario.',
+        )
+        ..addOption(
+          'intents',
+          help:
+              'JSON {label: intent} para las capturas que aún no declaran '
+              'el suyo (el steps.json del device tiene precedencia).',
+        ),
+    )
+    ..addCommand(
+      'review',
+      ArgParser()
+        ..addOption('base-dir', defaultsTo: 'test_evidence')
+        ..addOption('port', defaultsTo: '4771')
+        ..addFlag(
+          'once',
+          defaultsTo: true,
+          help: 'Cerrar al recibir el veredicto (el modo del loop de trabajo).',
+        )
+        ..addFlag('all', help: 'Incluir también las capturas sin cambios.')
+        ..addOption(
+          'propose',
+          help:
+              'JSON {"<scenario>/<actor>/<slug>": {"verdict":…,"rationale":…}} '
+              'con el pre-juicio del agente.',
+        ),
+    )
+    ..addCommand(
+      'promote',
+      ArgParser()
+        ..addOption('base-dir', defaultsTo: 'test_evidence')
+        ..addOption('scenario', mandatory: true)
+        ..addOption('actor', mandatory: true)
+        ..addOption(
+          'slugs',
+          help: 'Lista separada por comas.',
+          mandatory: true,
+        ),
+    );
 
   final ArgResults args;
   try {
