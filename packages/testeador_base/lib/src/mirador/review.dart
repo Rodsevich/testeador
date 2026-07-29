@@ -264,6 +264,10 @@ List<ReviewItem> _itemsFromManifest(
 /// Alternativas de un paso, por convención de directorio:
 /// `<runDir>/variants/<actor>-<slug>/*.png`, en orden alfabético — así el
 /// agente las deja ahí y el panel las encuentra sin que nadie las declare.
+///
+/// Son **efímeras**: al aplicar un veredicto con `chosenVariant`, el agente
+/// borra el directorio. Si quedaran, el panel seguiría ofreciendo una elección
+/// ya hecha en cada corrida siguiente.
 List<String> _variantsFor({
   required String dir,
   required String actor,
