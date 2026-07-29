@@ -78,6 +78,11 @@ const String _html = r'''
     gap: 12px; align-items: center; flex-wrap: wrap; background: var(--panel);
   }
   #bar .grow { flex: 1; }
+  #intent {
+    flex: 1 1 260px; min-width: 0; color: var(--dim);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
   #stage { flex: 1; overflow: auto; position: relative; display: grid; place-items: start center; padding: 14px; }
   #wrap { position: relative; line-height: 0; }
   #wrap img { max-width: 100%; height: auto; display: block; }
@@ -121,6 +126,39 @@ const String _html = r'''
   }
   #toast.on { display: block; }
   .empty { padding: 40px; color: var(--dim); text-align: center; }
+  #strip { display: flex; gap: 8px; align-items: flex-start; }
+  #strip figure { margin: 0; flex: 1 1 0; min-width: 0; cursor: pointer; }
+  #strip img { width: 100%; height: auto; display: block; border: 2px solid transparent; }
+  #strip figcaption { padding: 4px 0; color: var(--dim); text-align: center; }
+  #strip .on img { border-color: var(--gold); }
+  #strip .on figcaption { color: var(--gold); }
+
+  /* Paneles angostos (el panel lateral del IDE, media pantalla): la cola pasa
+     arriba en una tira, los controles se compactan y el resto es la imagen —
+     que es lo único que no se puede achicar sin perder el sentido. */
+  @media (max-width: 1000px) {
+    body { flex-direction: column; }
+    aside {
+      width: 100%; flex: 0 0 auto; max-height: 26vh;
+      border-right: 0; border-bottom: 1px solid var(--line);
+    }
+    aside header { padding: 6px 10px; }
+    #queue { display: flex; overflow-x: auto; }
+    .item {
+      grid-template-columns: 1fr; gap: 2px; min-width: 132px;
+      border-bottom: 0; border-right: 1px solid var(--line);
+    }
+    .item .meta { display: none; }
+    #bar { gap: 6px; padding: 6px 10px; }
+    #bar button { padding: 3px 6px; }
+    #bar kbd { display: none; }
+    #intent { flex-basis: 100%; -webkit-line-clamp: 3; }
+    #stage { padding: 6px; min-height: 45vh; }
+    #notes { padding: 6px 10px; }
+    #notes textarea { rows: 1; }
+    #palette { gap: 3px; padding: 6px 10px; }
+    .brush { padding: 2px 5px; }
+  }
 </style>
 </head>
 <body>
@@ -152,6 +190,7 @@ const String _html = r'''
       <img id="img" alt="">
       <canvas id="cv"></canvas>
     </div>
+    <div id="strip" style="display:none"></div>
     <div class="empty" id="empty" style="display:none">Sin capturas para revisar.</div>
   </div>
 
@@ -204,7 +243,7 @@ async function boot() {
   const data = await r.json();
   BRUSHES = data.brushes;
   ITEMS = data.items;
-  STATE = ITEMS.map((i) => ({ decision: null, marks: [], note: '' }));
+  STATE = ITEMS.map((i) => ({ decision: null, marks: [], note: '', chosen: null }));
   $('sub').textContent = ITEMS.length + ' captura(s) · ordenadas por severidad';
   renderPalette();
   renderQueue();
@@ -231,6 +270,7 @@ function renderQueue() {
     const vd = s.marks.length ? verdictOf(s.marks)
       : s.decision === 'accept' ? it.proposedVerdict
       : s.decision === 'reject' ? 'fix_code'
+      : s.decision === 'variant' ? 'variants ' + roman(s.chosen + 1)
       : s.decision === 'variants' ? 'variants'
       : it.proposedVerdict;
     return '<div class="item' + (i === cur ? ' sel' : '') + (decided ? ' done' : '') +
@@ -260,9 +300,42 @@ function select(i) {
   $('title').textContent = it.scenario + ' / ' + it.actor + ' / ' + it.slug;
   $('intent').textContent = it.intent ? '“' + it.intent + '”' : '(sin intent declarado)';
   $('note').value = st().note || '';
-  view = it.diff ? 4 : 0;
-  applyView();
+  if (it.variants && it.variants.length) {
+    renderStrip(it);
+  } else {
+    $('strip').style.display = 'none';
+    $('wrap').style.display = '';
+    view = it.diff ? 4 : 0;
+    applyView();
+  }
   renderQueue();
+}
+
+// Modo variantes: las alternativas ya implementadas y capturadas, lado a lado.
+// Se elige con 1/2/3 (o click); 0 descarta las tres y pide otra vuelta.
+function renderStrip(it) {
+  $('wrap').style.display = 'none';
+  const strip = $('strip');
+  strip.style.display = 'flex';
+  strip.innerHTML = it.variants.map((v, i) =>
+    '<figure class="' + (st().chosen === i ? 'on' : '') + '" onclick="chooseVariant(' + i + ')">' +
+    '<img src="' + shotUrl(v) + '" alt="">' +
+    '<figcaption>' + roman(i + 1) + ' · ' + esc(v.split('/').pop()) +
+    ' <kbd>' + (i + 1) + '</kbd></figcaption></figure>').join('');
+  $('viewName').textContent = it.variants.length + ' variante(s) · elegí con ' +
+    it.variants.map((_, i) => i + 1).join('/') + ', 0 = ninguna';
+}
+
+function roman(n) { return ['I', 'II', 'III', 'IV', 'V'][n - 1] || String(n); }
+
+function chooseVariant(i) {
+  const it = item();
+  if (!it.variants || !it.variants.length) return;
+  st().chosen = i;
+  st().decision = 'variant';
+  renderStrip(it);
+  renderQueue();
+  toast('elegiste la variante ' + roman(i + 1));
 }
 
 function applyView() {
@@ -392,6 +465,10 @@ async function send() {
       verdict = 'fix_code'; rationale = 'Rechazado en el panel: revertir el cambio.';
     } else if (s.decision === 'variants') {
       verdict = 'variants'; rationale = 'Se piden 3 variantes de esta pantalla.';
+    } else if (s.decision === 'variant' && s.chosen != null) {
+      verdict = 'variants';
+      rationale = 'Elegida la variante ' + roman(s.chosen + 1) + ' de ' +
+        it.variants.length + '.';
     } else if (s.decision === 'accept') {
       verdict = it.proposedVerdict; judgedBy = 'agent';
       rationale = it.rationale || 'Aceptado en bloque lo propuesto.';
@@ -407,6 +484,8 @@ async function send() {
         rect: bounds(m.points), points: m.points,
       })),
       note: s.note || null,
+      chosenVariant: (s.chosen != null && it.variants && it.variants[s.chosen])
+        ? it.variants[s.chosen].split('/').pop() : null,
     };
   }).filter(Boolean);
 
@@ -435,6 +514,18 @@ function toggleHelp() { $('help').classList.toggle('on'); }
 addEventListener('keydown', (ev) => {
   if (ev.target.tagName === 'TEXTAREA') return;
   const k = ev.key;
+  const vs = (item() && item().variants) || [];
+  if (vs.length) {
+    if (k === '0') {
+      st().chosen = null; st().decision = 'variants';
+      renderQueue(); toast('ninguna: se piden otras');
+      ev.preventDefault(); return;
+    }
+    const n = parseInt(k, 10);
+    if (n >= 1 && n <= vs.length) {
+      chooseVariant(n - 1); ev.preventDefault(); return;
+    }
+  }
   const bi = BRUSHES.findIndex((b) => b.key === k);
   if (bi >= 0) { pick(bi); ev.preventDefault(); return; }
   if (k === 'Tab') { pick((brushIx + 1) % BRUSHES.length); ev.preventDefault(); return; }

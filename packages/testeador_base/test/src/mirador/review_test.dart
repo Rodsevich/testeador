@@ -141,6 +141,87 @@ void main() {
     expect(loadQueue(baseDir: base).map((i) => i.slug), equals(['ok']));
   });
 
+  test(
+    'con baseDir RELATIVO las rutas salen absolutas: el server sólo puede '
+    'resolverlas contra su sandbox, no contra el cwd',
+    () {
+      final previo = Directory.current;
+      Directory.current = tmp;
+      addTearDown(() => Directory.current = previo);
+
+      writeManifest('flujo', 'actor', [step('movida', marks: 2, ratio: 0.01)]);
+      // Relativo, como lo pasa el CLI por defecto (`--base-dir test_evidence`).
+      final item = loadQueue(baseDir: 'test_evidence').single;
+
+      expect(p.isAbsolute(item.capture!), isTrue, reason: item.capture);
+      expect(p.isAbsolute(item.baseline!), isTrue, reason: item.baseline);
+    },
+  );
+
+  test(
+    'las variantes se detectan por convención de directorio, ordenadas',
+    () {
+      writeManifest('flujo', 'actor', [step('movida', marks: 2, ratio: 0.01)]);
+      final vd = Directory(
+        p.join(
+          scenarioRunDir(baseDir: base, scenario: 'flujo'),
+          'variants',
+          'actor-movida',
+        ),
+      )..createSync(recursive: true);
+      // Desordenadas a propósito: la tira las numera por nombre.
+      for (final n in ['03-banda', '01-titular', '02-card']) {
+        File(p.join(vd.path, '$n.png')).writeAsBytesSync(const [1, 2, 3]);
+      }
+
+      final item = loadQueue(baseDir: base).single;
+      expect(item.variants, hasLength(3));
+      expect(
+        item.variants.map((v) => p.basename(v)),
+        equals(['01-titular.png', '02-card.png', '03-banda.png']),
+      );
+      expect(item.variants.every(p.isAbsolute), isTrue);
+    },
+  );
+
+  test('sin variantes en disco, la lista queda vacía', () {
+    writeManifest('flujo', 'actor', [step('movida', marks: 2, ratio: 0.01)]);
+    expect(loadQueue(baseDir: base).single.variants, isEmpty);
+  });
+
+  test('la variante elegida viaja en el veredicto', () {
+    appendVerdicts(
+      baseDir: base,
+      decisions: const [
+        Decision(
+          scenario: 'flujo',
+          actor: 'actor',
+          slug: 'movida',
+          verdict: Verdict.variants,
+          rationale: 'Elegida la variante II de 3.',
+          judgedBy: 'human',
+          chosenVariant: '02-card.png',
+        ),
+      ],
+      judgedAt: 't',
+    );
+    final v =
+        (jsonDecode(
+                  File(
+                    p.join(
+                      scenarioBaselineDir(baseDir: base, scenario: 'flujo'),
+                      'verdicts.json',
+                    ),
+                  ).readAsStringSync(),
+                )
+                as Map<String, Object?>)['verdicts']!
+            as List;
+    expect(
+      (v.single as Map<String, Object?>)['chosenVariant'],
+      '02-card.png',
+    );
+  });
+
   test('sin runs/ la cola es vacía y no explota', () {
     expect(loadQueue(baseDir: base), isEmpty);
   });

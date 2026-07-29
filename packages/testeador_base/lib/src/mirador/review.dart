@@ -29,6 +29,7 @@ final class ReviewItem {
     this.origin,
     this.proposedVerdict,
     this.rationale,
+    this.variants = const [],
   });
 
   /// Escenario al que pertenece la captura.
@@ -79,6 +80,10 @@ final class ReviewItem {
   /// Procedencia de la captura (`patrol`, `live`, …).
   final String? origin;
 
+  /// Alternativas ya implementadas y capturadas, para elegir una viéndolas.
+  /// Cuando no está vacía, el panel muestra la tira en vez de una sola imagen.
+  final List<String> variants;
+
   /// Lo que el agente propone, para que el humano confirme en bloque.
   final Verdict? proposedVerdict;
 
@@ -104,6 +109,7 @@ final class ReviewItem {
     if (baseline != null) 'baseline': baseline,
     if (diff != null) 'diff': diff,
     if (attachments.isNotEmpty) 'attachments': attachments,
+    if (variants.isNotEmpty) 'variants': variants,
     if (exception != null) 'exception': exception,
     if (origin != null) 'origin': origin,
     if (proposedVerdict != null) 'proposedVerdict': proposedVerdict!.wire,
@@ -180,7 +186,11 @@ List<ReviewItem> _itemsFromManifest(
 
   final scenario = (json['scenario'] as String?) ?? '?';
   final actor = (json['actor'] as String?) ?? '?';
-  final dir = manifest.parent.path;
+  // ABSOLUTO a propósito: si `baseDir` vino relativo, `manifest.parent.path`
+  // también lo es, y una ruta relativa al cwd no la puede resolver el server
+  // (que resuelve contra su raíz de sandbox). Absolutizar acá deja una sola
+  // interpretación posible para todo consumidor.
+  final dir = manifest.parent.absolute.path;
   String? resolve(Object? rel) {
     if (rel is! String || rel.isEmpty) return null;
     return p.normalize(p.isAbsolute(rel) ? rel : p.join(dir, rel));
@@ -226,6 +236,7 @@ List<ReviewItem> _itemsFromManifest(
 
     out.add(
       ReviewItem(
+        variants: _variantsFor(dir: dir, actor: actor, slug: slug),
         scenario: scenario,
         actor: actor,
         slug: slug,
@@ -248,6 +259,27 @@ List<ReviewItem> _itemsFromManifest(
     );
   }
   return out;
+}
+
+/// Alternativas de un paso, por convención de directorio:
+/// `<runDir>/variants/<actor>-<slug>/*.png`, en orden alfabético — así el
+/// agente las deja ahí y el panel las encuentra sin que nadie las declare.
+List<String> _variantsFor({
+  required String dir,
+  required String actor,
+  required String slug,
+}) {
+  final d = Directory(p.join(dir, 'variants', '$actor-$slug'));
+  if (!d.existsSync()) return const [];
+  final files =
+      d
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.toLowerCase().endsWith('.png'))
+          .map((f) => f.absolute.path)
+          .toList()
+        ..sort();
+  return files;
 }
 
 /// Heurística de pre-juicio para cuando el agente no propuso nada.
@@ -358,6 +390,7 @@ final class Decision {
     this.capture,
     this.marks = const [],
     this.note,
+    this.chosenVariant,
   });
 
   /// Reconstruye desde el JSON que manda el panel.
@@ -377,6 +410,7 @@ final class Decision {
         .map(Mark.fromJson)
         .toList(growable: false),
     note: json['note'] as String?,
+    chosenVariant: json['chosenVariant'] as String?,
   );
 
   /// Escenario de la captura.
@@ -407,6 +441,10 @@ final class Decision {
   /// Texto libre de la captura: instrucciones que no pertenecen a una marca.
   final String? note;
 
+  /// Nombre del archivo de la variante elegida, cuando el veredicto fue
+  /// `variants` y el humano eligió una de la tira.
+  final String? chosenVariant;
+
   /// Fila de `verdicts.json`, con los campos del schema más los aditivos.
   Map<String, Object?> toVerdictJson(String judgedAt) => {
     if (capture != null) 'capture': capture,
@@ -418,6 +456,7 @@ final class Decision {
     'judgedBy': judgedBy,
     if (marks.isNotEmpty) 'marks': [for (final m in marks) m.toJson()],
     if (note != null && note!.isNotEmpty) 'note': note,
+    if (chosenVariant != null) 'chosenVariant': chosenVariant,
   };
 }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:patrol_finders/patrol_finders.dart';
 import 'package:testeador_base/testeador_base.dart';
@@ -151,6 +152,19 @@ final class UiTestFlow<T> implements ActorDrivenFlow<T> {
       }
     } finally {
       recorder.reconcileOrphans();
+      // Desmontar el árbol y avanzar el reloj un tick. Las apps reales dejan
+      // timers vivos (streams de la base, relojes, animaciones) y el binding
+      // de flutter_test falla el test con "A Timer is still pending even after
+      // the widget tree was disposed" aunque los pasos hayan pasado. El
+      // desmontaje corre los `dispose()` y el pump con duración dispara los
+      // `Timer.run` con que cierran esos streams.
+      try {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(milliseconds: 1));
+      } on Object {
+        // El árbol ya podía estar inconsistente por el fallo del paso: la
+        // evidencia ya está escrita y esa excepción es la que importa.
+      }
     }
     if (stepFailure != null) {
       Error.throwWithStackTrace(stepFailure, stepStackTrace!);

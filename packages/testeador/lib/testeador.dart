@@ -8,6 +8,9 @@
 /// Re-exports `testeador_base`, so a Flutter test only ever imports this.
 library;
 
+// `PatrolTester` aparece en la firma de `UiTestStep.body`: quien escribe un
+// paso necesita el tipo, así que viaja con el barrel.
+export 'package:patrol_finders/patrol_finders.dart';
 export 'package:testeador_base/evidence.dart';
 export 'package:testeador_base/testeador_base.dart';
 
