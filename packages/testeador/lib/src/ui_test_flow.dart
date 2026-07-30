@@ -51,6 +51,7 @@ final class UiTestFlow<T> implements ActorDrivenFlow<T> {
     this.viewport = ViewportPreset.phone,
     this.config = defaultEvidenceConfig,
     this.patrolConfig = const PatrolTesterConfig(),
+    this.knownDefects = const {},
     EvidenceFileSystem fileSystem = const EvidenceFileSystem(),
   }) : _fs = fileSystem {
     ensureUniqueSlugs(steps.map((s) => s.description));
@@ -71,6 +72,23 @@ final class UiTestFlow<T> implements ActorDrivenFlow<T> {
 
   /// Configuration for the [PatrolTester] handed to step bodies.
   final PatrolTesterConfig patrolConfig;
+
+  /// Defectos **ya conocidos** de la app que no deben poner el flujo en rojo:
+  /// substring del error → por qué se tolera.
+  ///
+  /// Mismo principio que "el drift nunca falla la corrida": un defecto visual
+  /// hay que *documentarlo*, no convertirlo en un test rojo sin foto. Un
+  /// overflow pinta su franja rayada y un `InkWell` sin `Material` deja su
+  /// hueco: la captura muestra el problema, que es más accionable que un stack
+  /// trace. Además estos errores se re-disparan en cada pump, así que la
+  /// tolerancia tiene que cubrir el flujo entero y no un body.
+  ///
+  /// Hay que **nombrar cada defecto** — no hay comodín. Un mapa vacío (el
+  /// default) no tolera nada, y cualquier error no listado sigue haciendo
+  /// fallar el paso: si esto fuera un colador escondería justo lo que la suite
+  /// existe para encontrar. El valor de cada entrada es la razón, y se imprime
+  /// al terminar para que nadie se olvide de que están ahí.
+  final Map<String, String> knownDefects;
 
   final EvidenceFileSystem _fs;
 
@@ -124,6 +142,21 @@ final class UiTestFlow<T> implements ActorDrivenFlow<T> {
       actor.dio.interceptors.add(actor.curlInterceptor);
     }
 
+    final previousOnError = FlutterError.onError;
+    final tolerated = <String, int>{};
+    if (knownDefects.isNotEmpty) {
+      FlutterError.onError = (details) {
+        final text = details.exceptionAsString();
+        for (final pattern in knownDefects.keys) {
+          if (text.contains(pattern)) {
+            tolerated[pattern] = (tolerated[pattern] ?? 0) + 1;
+            return;
+          }
+        }
+        previousOnError?.call(details);
+      };
+    }
+
     final app = await tester.runAsync(() => actor.session(world));
     await recorder.pump(tester, app!(), wrapInMaterialApp: false);
 
@@ -159,6 +192,15 @@ final class UiTestFlow<T> implements ActorDrivenFlow<T> {
         }
       }
     } finally {
+      if (knownDefects.isNotEmpty) {
+        FlutterError.onError = previousOnError;
+        for (final entry in tolerated.entries) {
+          debugPrint(
+            '[evidence] "$name": ${entry.value}× "${entry.key}" tolerado — '
+            '${knownDefects[entry.key]}. La captura lo muestra.',
+          );
+        }
+      }
       recorder.reconcileOrphans();
       // Desmontar el árbol y avanzar el reloj un tick. Las apps reales dejan
       // timers vivos (streams de la base, relojes, animaciones) y el binding
