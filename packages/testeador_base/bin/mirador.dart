@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:args/args.dart';
 import 'package:testeador_base/mirador.dart';
+import 'package:testeador_base/testeador_base.dart';
 
 /// mirador — panel de supervisión visual.
 ///
@@ -35,6 +36,21 @@ Future<void> main(List<String> argv) async {
               'JSON {label: intent} para las capturas que aún no declaran '
               'el suyo (el steps.json del device tiene precedencia).',
         ),
+    )
+    ..addCommand(
+      'capture',
+      ArgParser()
+        ..addOption('base-dir', defaultsTo: 'test_evidence')
+        ..addOption('scenario', help: 'Nombre del escenario.', mandatory: true)
+        ..addOption('actor', help: 'Persona / actor.', mandatory: true)
+        ..addOption('slug', help: 'Paso que se fotografía.', mandatory: true)
+        ..addOption('intent', help: 'Qué se espera ver en la pantalla.')
+        ..addOption(
+          'serial',
+          defaultsTo: 'emulator-5554',
+          help: 'Serial de adb del emulador.',
+        )
+        ..addOption('adb', defaultsTo: 'adb'),
     )
     ..addCommand(
       'review',
@@ -99,6 +115,27 @@ Future<void> main(List<String> argv) async {
         '${result.brandNew} sin baseline.\n${result.manifestPath}',
       );
 
+    case 'capture':
+      final device = AndroidEmulator(
+        serial: cmd.option('serial')!,
+        adbPath: cmd.option('adb')!,
+      );
+      final result = await captureLive(
+        take: device.screenshot,
+        source: device.id,
+        baseDir: cmd.option('base-dir')!,
+        scenario: cmd.option('scenario')!,
+        actor: cmd.option('actor')!,
+        slug: cmd.option('slug')!,
+        intent: cmd.option('intent'),
+      );
+      stdout.writeln(
+        'capturado ${result.scenario}/${result.actor}/${result.slug}: '
+        '${result.isNew ? 'sin baseline (~new)' : '${'!' * result.marks}'
+                  ' ${(result.ratio * 100).toStringAsFixed(2)}% distinto'}'
+        '\n${result.capture}',
+      );
+
     case 'review':
       final baseDir = cmd.option('base-dir')!;
       final server = MiradorServer(
@@ -143,11 +180,15 @@ String _usage(ArgParser root) =>
     '''
 mirador — panel de supervisión visual.
 
+  capture   fotografía la app corriendo en el emulador y la difea
   ingest    normaliza una corrida de patrol al layout del contrato y difea
   review    sirve el panel y espera el veredicto
   promote   copia capturas a baseline (lo que ejecuta un replace_baseline)
 
 ${root.usage}
+
+capture:
+${root.commands['capture']!.usage}
 
 ingest:
 ${root.commands['ingest']!.usage}

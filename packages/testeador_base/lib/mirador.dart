@@ -6,6 +6,7 @@
 library;
 
 export 'src/mirador/brushes.dart';
+export 'src/mirador/capture.dart';
 export 'src/mirador/ingest.dart';
 export 'src/mirador/review.dart';
 export 'src/mirador/server.dart';
