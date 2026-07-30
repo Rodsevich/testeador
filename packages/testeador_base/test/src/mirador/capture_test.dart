@@ -9,7 +9,7 @@ import 'package:testeador_base/mirador.dart';
 
 /// Captura de laboratorio: escribe el PNG que se le diga, sin tocar adb. Lo
 /// que se ejercita es el layout de evidencia y el scoring, no el transporte.
-ScreenshotTaker _fake(List<int> bytes) => (File out) async {
+ScreenshotTaker _fake(List<int> bytes) => (out) async {
   out.parent.createSync(recursive: true);
   return out..writeAsBytesSync(bytes);
 };

@@ -23,6 +23,8 @@ library;
 import 'package:test/test.dart' as real_test show Timeout;
 import 'package:testeador_base/src/codegen/registry.dart';
 
+// `test` es dev_dependency por el choque de test_api con flutter_test (ver el
+// comentario del import de arriba); el re-export es intrínseco a esta librería.
 // ignore: depend_on_referenced_packages
 export 'package:test/test.dart'
     hide group, setUp, setUpAll, tearDown, tearDownAll, test;
