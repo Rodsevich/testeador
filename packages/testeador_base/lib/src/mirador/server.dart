@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
+import 'package:testeador_base/src/mirador/capture.dart';
 import 'package:testeador_base/src/mirador/review.dart';
 import 'package:testeador_base/src/mirador/ui.dart';
 
@@ -18,6 +19,9 @@ final class MiradorServer {
     this.port = 4771,
     this.once = true,
     this.address,
+    this.take,
+    this.captureScenario = 'en vivo',
+    this.captureActor = 'dev',
   });
 
   /// Raíz de la evidencia (`test_evidence/`). También es el **sandbox**: no se
@@ -32,6 +36,16 @@ final class MiradorServer {
 
   /// Por defecto solo loopback: el panel expone capturas del proyecto.
   final InternetAddress? address;
+
+  /// Cómo sacar una captura cuando el panel pide `POST /capture`. Sin esto la
+  /// ruta responde 501: no todos los contextos tienen un device a mano.
+  final ScreenshotTaker? take;
+
+  /// Escenario y actor con que se registran las capturas en vivo del panel.
+  final String captureScenario;
+
+  /// Actor de las capturas en vivo.
+  final String captureActor;
 
   HttpServer? _server;
 
@@ -56,6 +70,23 @@ final class MiradorServer {
     await for (final req in server) {
       try {
         final path = req.uri.path;
+        // El visor embebido en DevTools corre en OTRO origen (su propio
+        // puerto), así que sin esto el navegador le bloquea cada fetch. El
+        // server ya escucha sólo en loopback, así que abrir el origen no
+        // amplía a quién puede llegarle.
+        req.response.headers
+          ..set('Access-Control-Allow-Origin', '*')
+          ..set('Access-Control-Allow-Headers', 'content-type')
+          ..set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        if (req.method == 'OPTIONS') {
+          req.response.statusCode = HttpStatus.ok;
+          await req.response.close();
+          continue;
+        }
+        if (req.method == 'POST' && path == '/capture') {
+          await _capture(req);
+          continue;
+        }
         if (req.method == 'GET' && (path == '/' || path == '/index.html')) {
           req.response
             ..headers.contentType = ContentType.html
@@ -119,6 +150,62 @@ final class MiradorServer {
 
     await close();
     return outcome;
+  }
+
+  /// Saca una captura en vivo y responde con el ítem recién creado, para que
+  /// el panel pueda mostrarla sin recargar la cola entera.
+  Future<void> _capture(HttpRequest req) async {
+    final taker = take;
+    if (taker == null) {
+      req.response
+        ..statusCode = HttpStatus.notImplemented
+        ..headers.contentType = ContentType.json
+        ..write(
+          jsonEncode({
+            'ok': false,
+            'error':
+                'este panel se levantó sin device: relanzá `mirador review` '
+                'con --serial para poder capturar desde acá',
+          }),
+        );
+      await req.response.close();
+      return;
+    }
+    final body = await utf8.decoder.bind(req).join();
+    final args = body.isEmpty
+        ? const <String, Object?>{}
+        : jsonDecode(body) as Map<String, Object?>;
+    try {
+      final result = await captureLive(
+        take: taker,
+        baseDir: baseDir,
+        scenario: (args['scenario'] as String?) ?? captureScenario,
+        actor: (args['actor'] as String?) ?? captureActor,
+        slug: (args['slug'] as String?) ?? 'captura',
+        intent: args['intent'] as String?,
+      );
+      req.response
+        ..statusCode = HttpStatus.ok
+        ..headers.contentType = ContentType.json
+        ..write(
+          jsonEncode({
+            'ok': true,
+            'scenario': result.scenario,
+            'actor': result.actor,
+            'slug': result.slug,
+            'capture': result.capture,
+            'marks': result.marks,
+            'ratio': result.ratio,
+            'isNew': result.isNew,
+          }),
+        );
+    } on Object catch (e) {
+      req.response
+        ..statusCode = HttpStatus.internalServerError
+        ..headers.contentType = ContentType.json
+        ..write(jsonEncode({'ok': false, 'error': e.toString()}));
+    }
+    await req.response.close();
   }
 
   /// Sirve un PNG **solo si vive dentro de [baseDir]**. La ruta llega del

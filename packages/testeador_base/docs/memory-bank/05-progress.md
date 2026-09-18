@@ -22,10 +22,12 @@
 - Mini Serverpod project (`server` + `client` + `flutter`); streaming endpoints fan out via `session.messages` (`playerAdded`, `battleAdded`, `battleUpdates`); Flutter lobby auto-updates with a `● Live` chip.
 - Patrol agent flows + a testeador smoke flow driving Patrol on two devices in parallel, capturing `evidence/<label>/composite.png` per step.
 
-### Multi-device evidence (`lib/src/multidev/`)
+### Multi-device evidence & Mirador (`lib/src/multidev/`, `lib/src/mirador/`)
 
 - `TargetDevice` (`AndroidEmulator`/`IosSimulator`/`WebDevice`) with boot/shutdown/screenshot; `DeviceFleet` (`snapshot`, `snapshotComposite`, `runPatrolAcross`, `runPatrolOn`); `FlutterActor`; `PatrolRunner`; `ScreenshotComposer.sideBySide` (the canonical AI-review artifact); CLI `bin/snapshot_fleet.dart`.
 - **Web as a driven device** — `WebDevice`→`chrome`; pure `patrolCommandFor`; web admin panel e2e **1/1 green** in real headless Chrome (see [04-active-context.md](04-active-context.md)).
+- **MiradorServer CORS & `POST /capture`** — CORS headers (`Access-Control-Allow-*`) for cross-origin DevTools panel embeds; `POST /capture` live screenshot endpoint. Unit tests in `server_test.dart`.
+- **`reporter` domain & VM autodiscovery** — `registerReporterDomain` (in `package:testeador`) federates active route, unhandled exceptions (`FlutterError.onError`), Bloc states (`BlocObserver`), and widget tree. `resolveVmUri` (in `package:testeador_base`) autodiscovers VM Service WebSocket from `vm-service-info*.json`. Tests in `reporter_domain_test.dart` and `report_test.dart`.
 
 ### MCP server (`lib/src/mcp/`, `testeador mcp`)
 

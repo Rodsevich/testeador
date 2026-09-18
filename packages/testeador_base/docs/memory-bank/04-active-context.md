@@ -18,6 +18,9 @@ The Flutter example couldn't `pub get` (`testeador`'s analyzer ^13 → meta ^1.1
 
 ## Recent landed work (uncommitted, detail in 05-progress)
 
+- **`reporter` domain & VM autodiscovery (2026-09-18)** — `registerReporterDomain` federates route, unhandled errors, Bloc states, and widget tree via `dev_mate`. `resolveVmUri` autodiscovers VM Service WebSocket from `vm-service-info*.json`. Full unit test coverage in `reporter_domain_test.dart` and `report_test.dart`.
+- **MiradorServer CORS & `POST /capture` (2026-09-18)** — CORS headers for DevTools embedded panel; `POST /capture` live screenshot endpoint. 100% green tests in `server_test.dart`.
+- **Web e2e + admin panel (2026-05-30)** — `WebDevice` is now a *driven* Patrol-web target, not just an evidence surface: the fleet runs `patrol test --device chrome` against a Flutter web app, with a new Serverpod **web admin panel** as the system under test.
 - **Discover-and-pick (2026-05-29)** — `dart run testeador discover` + MCP `discover_tests`: inventory + scaffold a `TestFlow` from captured tests. 16/16 tests; E2E 2/2 in pokebattle_serverpod_server.
 - **`TestInjector` codegen (2026-05-29)** — inject `package:test` bodies into flows via build_runner. 8/8 pipeline; E2E in `inject_demo/` (9/9) and the Serverpod server. Bumped analyzer 8→13.
 - **Publication prep + fixes (2026-05-26, v0.3.0)** — CLI-mode `expect` (`package:testeador/expect.dart`, fixes `OutsideTestException`); tag forwarding to `group(tags:)`; CHANGELOG/.pubignore/pubspec metadata; `dart pub publish --dry-run` clean. Still `publish_to: none`.

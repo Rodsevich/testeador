@@ -169,6 +169,78 @@ void main() {
     await pending;
   });
 
+  test('responde CORS y contesta el preflight: el visor de DevTools corre en '
+      'otro origen', () async {
+    final pending = server.serve();
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+
+    final res = await get('/queue');
+    expect(res.headers.value('access-control-allow-origin'), '*');
+
+    final req = await client.openUrl(
+      'OPTIONS',
+      Uri.parse('http://127.0.0.1:${server.boundPort}/verdict'),
+    );
+    final pre = await req.close();
+    expect(pre.statusCode, HttpStatus.ok);
+    expect(pre.headers.value('access-control-allow-methods'), contains('POST'));
+
+    await server.close();
+    await pending;
+  });
+
+  test('POST /capture sin device responde 501 con la salida', () async {
+    final pending = server.serve();
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+
+    final req = await client.postUrl(
+      Uri.parse('http://127.0.0.1:${server.boundPort}/capture'),
+    );
+    final res = await req.close();
+    expect(res.statusCode, HttpStatus.notImplemented);
+    expect(
+      await res.transform(utf8.decoder).join(),
+      contains('--serial'),
+      reason: 'el error tiene que decir cómo habilitarlo',
+    );
+
+    await server.close();
+    await pending;
+  });
+
+  test('POST /capture con device captura y devuelve el ítem', () async {
+    final conDevice = MiradorServer(
+      baseDir: base,
+      port: 0,
+      take: (out) async {
+        out.parent.createSync(recursive: true);
+        return out
+          ..writeAsBytesSync(img.encodePng(img.Image(width: 8, height: 8)));
+      },
+    );
+    final pending = conDevice.serve();
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+
+    final req = await client.postUrl(
+      Uri.parse('http://127.0.0.1:${conDevice.boundPort}/capture'),
+    );
+    req.headers.contentType = ContentType.json;
+    req.write(jsonEncode({'slug': 'hodie', 'intent': 'se ve el día'}));
+    final res = await req.close();
+    expect(res.statusCode, HttpStatus.ok);
+
+    final body =
+        jsonDecode(await res.transform(utf8.decoder).join())
+            as Map<String, Object?>;
+    expect(body['ok'], isTrue);
+    expect(body['slug'], 'hodie');
+    expect(body['isNew'], isTrue);
+    expect(File(body['capture']! as String).existsSync(), isTrue);
+
+    await conDevice.close();
+    await pending;
+  });
+
   test('una ruta desconocida es 404 y no tumba el server', () async {
     final pending = server.serve();
     await Future<void>.delayed(const Duration(milliseconds: 60));

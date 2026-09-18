@@ -64,6 +64,15 @@ Future<void> main(List<String> argv) async {
         )
         ..addFlag('all', help: 'Incluir también las capturas sin cambios.')
         ..addOption(
+          'serial',
+          help:
+              'Serial de adb. Con esto el panel puede capturar en vivo por '
+              'POST /capture; sin esto esa ruta responde 501.',
+        )
+        ..addOption('adb', defaultsTo: 'adb')
+        ..addOption('capture-scenario', defaultsTo: 'en vivo')
+        ..addOption('capture-actor', defaultsTo: 'dev')
+        ..addOption(
           'propose',
           help:
               'JSON {"<scenario>/<actor>/<slug>": {"verdict":…,"rationale":…}} '
@@ -81,6 +90,40 @@ Future<void> main(List<String> argv) async {
           help: 'Lista separada por comas.',
           mandatory: true,
         ),
+    )
+    ..addCommand(
+      'report',
+      ArgParser()
+        ..addOption(
+          'info-dir',
+          help:
+              'Directorio con los *vm-service-info*.json que escribe '
+              '`flutter run` (autodiscovery del VM service, el mismo que usa '
+              'el attach de VS Code).',
+          mandatory: true,
+        )
+        ..addOption(
+          'message',
+          defaultsTo: '',
+          help: 'Instrucción libre para quien lea la captura.',
+        )
+        ..addFlag(
+          'paint',
+          help:
+              'Además, capturar un screenshot en vivo (como `capture`) con '
+              'la metadata de dev_mate como `--intent`, para pintar en '
+              '`review`.',
+        )
+        ..addOption('base-dir', defaultsTo: 'test_evidence')
+        ..addOption('scenario', defaultsTo: 'dev-report')
+        ..addOption('actor', defaultsTo: 'dev')
+        ..addOption('slug', help: 'Por defecto, un timestamp.')
+        ..addOption(
+          'serial',
+          defaultsTo: 'emulator-5554',
+          help: 'Serial de adb del emulador (solo con --paint).',
+        )
+        ..addOption('adb', defaultsTo: 'adb'),
     );
 
   final ArgResults args;
@@ -138,10 +181,19 @@ Future<void> main(List<String> argv) async {
 
     case 'review':
       final baseDir = cmd.option('base-dir')!;
+      final serial = cmd.option('serial');
       final server = MiradorServer(
         baseDir: baseDir,
         port: int.parse(cmd.option('port')!),
         once: cmd.flag('once'),
+        take: serial == null
+            ? null
+            : AndroidEmulator(
+                serial: serial,
+                adbPath: cmd.option('adb')!,
+              ).screenshot,
+        captureScenario: cmd.option('capture-scenario')!,
+        captureActor: cmd.option('capture-actor')!,
       );
       final proposals = _proposals(cmd.option('propose'));
       final url = 'http://127.0.0.1:${server.boundPort}';
@@ -173,6 +225,37 @@ Future<void> main(List<String> argv) async {
         slugs: cmd.option('slugs')!.split(',').map((s) => s.trim()),
       );
       stdout.writeln('promovidas $n captura(s) a baseline.');
+
+    case 'report':
+      final metadata = await captureReport(
+        infoDir: cmd.option('info-dir')!,
+        message: cmd.option('message') ?? '',
+      );
+      final encoded = jsonEncode(metadata);
+      stdout.writeln(encoded);
+      if (cmd.flag('paint')) {
+        final device = AndroidEmulator(
+          serial: cmd.option('serial')!,
+          adbPath: cmd.option('adb')!,
+        );
+        final slug =
+            cmd.option('slug') ??
+            'reporte-${DateTime.now().millisecondsSinceEpoch}';
+        final result = await captureLive(
+          take: device.screenshot,
+          source: device.id,
+          baseDir: cmd.option('base-dir')!,
+          scenario: cmd.option('scenario')!,
+          actor: cmd.option('actor')!,
+          slug: slug,
+          intent: encoded,
+        );
+        stdout.writeln(
+          'capturado para pintar: ${result.scenario}/${result.actor}/'
+          '${result.slug}\n${result.capture}\n'
+          'corré `mirador review --once` para pintar con los pinceles.',
+        );
+      }
   }
 }
 
@@ -184,6 +267,9 @@ mirador — panel de supervisión visual.
   ingest    normaliza una corrida de patrol al layout del contrato y difea
   review    sirve el panel y espera el veredicto
   promote   copia capturas a baseline (lo que ejecuta un replace_baseline)
+  report    invoca ext.dev_mate.reporter.capture (ruta/blocs/error/widget
+            tree) en la app corriendo en dev, con --paint para además
+            capturar y dejar lista una foto para pintar en review
 
 ${root.usage}
 
@@ -197,7 +283,10 @@ review:
 ${root.commands['review']!.usage}
 
 promote:
-${root.commands['promote']!.usage}''';
+${root.commands['promote']!.usage}
+
+report:
+${root.commands['report']!.usage}''';
 
 /// `f2-converso` → `converso`.
 String _actorFrom(String scenario) {

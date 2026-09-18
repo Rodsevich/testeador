@@ -21,8 +21,15 @@ environment:
   flutter: ">=3.44.0"
 
 dependencies:
+  # dev_mate: federa el dominio `reporter` (captura ruta/error/blocs/widget
+  # tree en vivo) como VM service extension — mismo transporte que ya usan
+  # `appearance`/`clock` en las apps consumidoras.
+  dev_mate: ^0.1.0
   flutter:
     sdk: flutter
+  # `flutter_bloc`: el dominio `reporter` encadena `Bloc.observer` para
+  # capturar el último estado de cada Bloc sin listarlos a mano.
+  flutter_bloc: ^9.1.1
   # `flutter_test` es dependencia de lib/, no de dev: la captura de evidencia
   # rasteriza el árbol de widgets desde un WidgetTester.
   flutter_test:

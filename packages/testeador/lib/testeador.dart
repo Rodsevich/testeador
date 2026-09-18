@@ -14,6 +14,7 @@ export 'package:patrol_finders/patrol_finders.dart';
 export 'package:testeador_base/evidence.dart';
 export 'package:testeador_base/testeador_base.dart';
 
+export 'src/dev_mate/reporter_domain.dart';
 export 'src/evidence_recorder.dart';
 export 'src/evidence_setup.dart';
 export 'src/fixture_entry.dart';

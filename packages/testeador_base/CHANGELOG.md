@@ -8,6 +8,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Dominio `reporter` de `dev_mate` y autodescubrimiento de VM Service.**
+  `registerReporterDomain` en `package:testeador` federa en vivo la ruta activa,
+  últimas excepciones no controladas (`FlutterError.onError`), estado de cada
+  `Bloc` (`BlocObserver`) y árbol de widgets. `resolveVmUri` en
+  `package:testeador_base` autodescubre la URI WebSocket del VM Service a partir
+  de los archivos `*vm-service-info*.json` escritos por Flutter en desarrollo.
+- **`MiradorServer` CORS y endpoint `POST /capture`.**
+  `MiradorServer` responde a peticiones preflight `OPTIONS` e incluye encabezados
+  CORS (`Access-Control-Allow-*`) para integración con visores embebidos en
+  DevTools que corren en otros orígenes. Nuevo endpoint `POST /capture` para
+  sacar capturas en vivo y retornar el ítem al panel.
 - **`multidev` para apps con flavors + recuperación de artefactos.**
   `PatrolRunner.runOn` / `DeviceFleet.runPatrolAcross` / `runPatrolOn` aceptan
   `flavor` (→ `--flavor <x>`) y `extraArgs` (flags arbitrarios, p. ej.
