@@ -206,7 +206,15 @@ Each stage can be shipped on its own and leaves the repo coherent.
   - T0.2 `3aba33d` (inline, 2 source files). Root cause confirmed: the repo root has no `pubspec.yaml`, so `dart run testeador:testeador` failed with "Found no pubspec.yaml". `.mcp.json` now runs `dart run packages/testeador_base/bin/testeador.dart mcp`, and the patrol `PROJECT_ROOT` prefix was fixed too. `resolveDocFile` + `testeadorBasePackageRoot` serve the docs from the package root. TDD: RED (undefined functions), then GREEN, with 5 new tests. The full `dart test` suite passes (275), and `dart analyze` reports 0 issues. An end-to-end MCP stdio handshake from the root read all 3 `testeador://docs/*` resources. `_version` is now 0.4.0.
   - Finding for T4.3: from `packages/testeador`, `dart run testeador_base:testeador --version` works.
   - T0.3 (inline): memory-bank 04/05 updated.
-  - Review assess for `ae765e6..3aba33d`: risk medium, `review_due=false`, reason `under_budget`, so it stays pending in the slice.
+  - Review assess for `ae765e6..3aba33d`: risk medium, `review_due=false`, reason `under_budget`, so it stayed pending in the slice.
+  - After T0.3 (`a48608e`) the slice reached its budget (`slice_budget_reached`, medium, 14 files / 437 lines).
+    - Consent: **granted**.
+    - One lens, `review-reliability`: **approved**, acknowledged, authority burned (lineage `review-ec37be6a52d7d195`). The reviewed boundary is now `a48608e`.
+    - Local-only change to make that possible: `.atl/`, `.codegraph/` and `devtools_options.yaml` added to `.git/info/exclude`, so the preflight is not blocked on untracked tool noise.
+  - Non-blocking follow-ups from the review, not scope:
+    - R3-001: `.mcp.json` relative paths assume the client spawns from the repo root. That holds for Claude Code; revisit if another client needs it.
+    - R3-002: a `late tmp` teardown masks a setUp failure. Trivial.
+    - R3-003: add a test for the one-level-up candidate in `resolveDocFile`. Fold it into T5.3 or a later touch of `resources.dart`.
 
 ## Next step
 
