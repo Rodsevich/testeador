@@ -4,7 +4,7 @@ import 'package:testeador_base/src/capture/record_cli.dart';
 import 'package:testeador_base/src/discovery/cli.dart';
 import 'package:testeador_base/src/mcp/server.dart';
 
-const _version = '0.3.0';
+const _version = '0.4.0';
 
 const _usage =
     '''

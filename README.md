@@ -175,7 +175,7 @@ It operates on the project named by `TESTEADOR_PROJECT_ROOT` (falling back to th
   "mcpServers": {
     "testeador": {
       "command": "dart",
-      "args": ["run", "--no-serve-devtools", "testeador:testeador", "mcp"],
+      "args": ["run", "--no-serve-devtools", "testeador_base:testeador", "mcp"],
       "cwd": "${workspaceFolder}",
       "env": {
         "TESTEADOR_PROJECT_ROOT": "${workspaceFolder}",
