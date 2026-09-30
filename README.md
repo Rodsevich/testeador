@@ -6,7 +6,7 @@ Sequential integration test orchestrator for Dart — runs frontend contract tes
 ![Dart SDK](https://img.shields.io/badge/dart-%5E3.11.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Frontend teams write integration tests that pin down a backend's contract (field names, response shapes, endpoints). Those tests normally run only in the frontend pipeline, so a backend change can silently break them until production. `testeador` runs the *same* frontend tests inside the backend CI, catching contract regressions before they merge. Full rationale: [docs/PROBLEM.md](docs/PROBLEM.md).
+Frontend teams write integration tests that pin down a backend's contract (field names, response shapes, endpoints). Those tests normally run only in the frontend pipeline, so a backend change can silently break them until production. `testeador` runs the *same* frontend tests inside the backend CI, catching contract regressions before they merge. Full rationale: [docs/PROBLEM.md](packages/testeador_base/docs/PROBLEM.md).
 
 ## How It Works
 
@@ -16,7 +16,7 @@ Group `TestStep`s into `TestFlow`s and hand them to `Testeador`. Each `Actor` ge
 
 ## Concepts
 
-Class signatures and design rationale live in [docs/architecture.md](docs/architecture.md). This section shows how you use each piece.
+Class signatures and design rationale live in [docs/architecture.md](packages/testeador_base/docs/architecture.md). This section shows how you use each piece.
 
 ### Actor
 
@@ -156,7 +156,7 @@ dart compile exe bin/run_tests.dart -o bin/test_runner         # standalone bina
 
 ## CLI
 
-testeador ships a single executable, `testeador`, with subcommands (declared in [`pubspec.yaml`](pubspec.yaml); entrypoint [`bin/testeador.dart`](bin/testeador.dart)).
+testeador ships a single executable, `testeador`, with subcommands (declared in [`pubspec.yaml`](packages/testeador_base/pubspec.yaml); entrypoint [`bin/testeador.dart`](packages/testeador_base/bin/testeador.dart)).
 
 ```bash
 dart run testeador --help            # list subcommands
@@ -166,7 +166,7 @@ dart run testeador discover          # list captured tests (codegen)
 
 ## MCP Server (`testeador mcp`)
 
-`testeador mcp` is a Model Context Protocol server exposing every package feature to any MCP client (Claude Code, Cursor, etc.). Implementation under [`lib/src/mcp/`](lib/src/mcp/).
+`testeador mcp` is a Model Context Protocol server exposing every package feature to any MCP client (Claude Code, Cursor, etc.). Implementation under [`lib/src/mcp/`](packages/testeador_base/lib/src/mcp/).
 
 It operates on the project named by `TESTEADOR_PROJECT_ROOT` (falling back to the nearest ancestor of CWD whose `pubspec.yaml` is or depends on testeador), so consumers add it to their own `.mcp.json`:
 
@@ -214,7 +214,7 @@ Drafts are written without overwriting; refine them and wire each to the actor w
 
 ## Example
 
-[`example/pokebattle_rest/`](example/pokebattle_rest/) is the REST-backed PokéBattle scenario: two actors (Firesh, Watersh), `TestFlowLasting` flows against real backends — **PokéAPI** for Pokémon data and **restful-api.dev** for players and battles. [`example/pokebattle_serverpod/`](example/pokebattle_serverpod/) is the streaming variant on Serverpod (push auto-updates, multi-device E2E) and ships a **web admin panel** driven end-to-end in real Chrome by Patrol-web. See [`example/pokebattle_rest/README.md`](example/pokebattle_rest/README.md) for details.
+[`example/pokebattle_rest/`](packages/testeador_base/example/pokebattle_rest/) is the REST-backed PokéBattle scenario: two actors (Firesh, Watersh), `TestFlowLasting` flows against real backends — **PokéAPI** for Pokémon data and **restful-api.dev** for players and battles. [`example/pokebattle_serverpod/`](packages/testeador_base/example/pokebattle_serverpod/) is the streaming variant on Serverpod (push auto-updates, multi-device E2E) and ships a **web admin panel** driven end-to-end in real Chrome by Patrol-web. See [`example/pokebattle_rest/README.md`](packages/testeador_base/example/pokebattle_rest/README.md) for details.
 
 ```bash
 dart run example/pokebattle_rest/bin/run_tests.dart --include-tags smoke --verbose
