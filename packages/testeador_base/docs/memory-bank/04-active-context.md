@@ -2,11 +2,13 @@
 
 *Update when: new work begins, priorities shift, or blockers are resolved.*
 
-**Last updated:** 2026-05-30
+**Last updated:** 2026-09-30
 
 ## Current Focus
 
-**Web e2e + admin panel — landed 2026-05-30 (uncommitted).** `WebDevice` is now a *driven* Patrol-web target, not just an evidence surface: the fleet runs `patrol test --device chrome` against a Flutter web app, with a new Serverpod **web admin panel** as the system under test.
+**AI docs + skills installer (2026-09-30, branch `feat/ai-docs-skills`).** Goal: an AI asked for a feature in a testeador consumer writes a `UiTestFlow` with intents, runs it, opens mirador for the user's visual verdict and acts on it — unprompted. Plan and progress: [`odd/tasks/testeador-ai-docs-and-skills.md`](../../../../odd/tasks/testeador-ai-docs-and-skills.md). Stage 0 fixed root doc links and the MCP entry (root has no `pubspec.yaml`, so `.mcp.json` runs the server by script path; `testeador://docs/*` resolve from the package root).
+
+**Previously — web e2e + admin panel — landed 2026-05-30 (uncommitted).** `WebDevice` is now a *driven* Patrol-web target, not just an evidence surface: the fleet runs `patrol test --device chrome` against a Flutter web app, with a new Serverpod **web admin panel** as the system under test.
 
 - **multidev:** `TargetDevice` gained `patrolDeviceId` (`WebDevice`→`'chrome'`) + `patrolExtraArgs()` (web → `--web-headless <bool> --web-viewport '{"width":W,"height":H}'`). **`--web-viewport` takes a JSON object, not `WxH`.** Pure `patrolCommandFor(device, target)` in [patrol_runner.dart](../../lib/src/multidev/patrol_runner.dart) is the single source of truth (android→serial, ios→udid, web→chrome+flags); `runOn` uses it.
 - **MCP:** `run_patrol_fleet`/`boot`/`shutdown`/`snapshot` accept `platform: web` with `url`/`route`/`web_headless`/`viewport`; `list_devices` probes Chrome. **Restart a running MCP server to pick these up.**

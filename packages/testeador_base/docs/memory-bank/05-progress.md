@@ -26,8 +26,15 @@
 
 - `TargetDevice` (`AndroidEmulator`/`IosSimulator`/`WebDevice`) with boot/shutdown/screenshot; `DeviceFleet` (`snapshot`, `snapshotComposite`, `runPatrolAcross`, `runPatrolOn`); `FlutterActor`; `PatrolRunner`; `ScreenshotComposer.sideBySide` (the canonical AI-review artifact); CLI `bin/snapshot_fleet.dart`.
 - **Web as a driven device** — `WebDevice`→`chrome`; pure `patrolCommandFor`; web admin panel e2e **1/1 green** in real headless Chrome (see [04-active-context.md](04-active-context.md)).
+- **Mirador panel (2026-07-28 → 07-30)** — `bin/mirador.dart` subcommands `ingest` (patrol run → evidence layout), `capture` (live adb screenshot vs. baseline), `review` (loopback panel, queue ordered by drift; brushes are the verdict actions, per-stroke + round notes → `POST /verdict` → `baseline/<scenario>/verdicts.json`; `--propose` injects the agent's pre-judgment; ephemeral variants mode), `promote` (captures → baseline), `report` (`ext.dev_mate.reporter.capture`). The step intent travels from the device into the capture.
 - **MiradorServer CORS & `POST /capture`** — CORS headers (`Access-Control-Allow-*`) for cross-origin DevTools panel embeds; `POST /capture` live screenshot endpoint. Unit tests in `server_test.dart`.
 - **`reporter` domain & VM autodiscovery** — `registerReporterDomain` (in `package:testeador`) federates active route, unhandled exceptions (`FlutterError.onError`), Bloc states (`BlocObserver`), and widget tree. `resolveVmUri` (in `package:testeador_base`) autodiscovers VM Service WebSocket from `vm-service-info*.json`. Tests in `reporter_domain_test.dart` and `report_test.dart`.
+
+### Flutter UI flows & evidence (`packages/testeador`, 2026-07-28 → 07-30)
+
+- **Monorepo split:** the pure-Dart core became `testeador_base`; the Flutter package `testeador` depends on it (never the reverse — `analyzer`/`test` vs. `flutter_test` pins don't co-resolve).
+- **UI flows:** `UiActor<T>`, `UiTestStep<T>` (record with required `intent`), `UiTestFlow` (`viewport`, `knownDefects`), `TestSuite.entry` (fixture × actors × flows), `ViewportPreset`, `setUpEvidence` (bundled Roboto for offline rendering).
+- **Evidence:** the flow photographs after every step (steps never call the camera); `~crash` capture + remaining steps `skipped` on failure; actor curls dumped only when a step fails; drift marks against the versioned baseline never fail the run; `knownDefects` tolerates a documented FlutterError instead of hiding it.
 
 ### MCP server (`lib/src/mcp/`, `testeador mcp`)
 
