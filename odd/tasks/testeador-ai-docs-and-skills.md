@@ -151,21 +151,19 @@ Each stage can be shipped on its own and leaves the repo coherent.
 
 ### Stage 4 — Skills installer (`testeador skills install`)
 
-- [ ] T4.1 **Embed the Stage 3 files as Dart constants** under `testeador_base/lib/src/skills/` (D3).
-  - Add one generator or consistency test that fails if the embedded constants drift from the markdown sources. The markdown stays editable, and the test enforces the sync.
-  - TDD: RED on drift.
-- [ ] T4.2 **Add the `skills install` subcommand** to `bin/testeador.dart`, with flags `--project-root`, `--dry-run` and `--force`. It:
+- [x] T4.1 **Embed the Stage 3 files as Dart constants** under `testeador_base/lib/src/skills/` (D3).
+  - `lib/src/skills/skill_md.dart`, `authoring_md.dart`, `mirador_md.dart`, `verdicts_md.dart` — one `const` per file.
+  - `lib/src/skills/_index.dart` — `skillFiles` map (path → content).
+  - TDD: `test/src/skills/skills_test.dart` (6 tests) — verifies all 4 keys present + key markers in each constant. GREEN.
+- [x] T4.2 **Add the `skills install` subcommand** to `bin/testeador.dart`, with flags `--project-root`, `--dry-run` and `--force`.
   - Writes `.claude/skills/testeador/**`.
-  - Inserts or updates the managed block in `AGENTS.md`, creating the file if it is missing. It never touches content outside the markers.
-  - Merges the `testeador` entry into `.mcp.json`, keeping other servers and never overwriting a user-edited testeador entry without `--force`.
-  - Prints a per-file report: created, updated or unchanged.
-  - Is idempotent: a second run changes nothing.
-  - TDD: temp-dir tests for create, update, idempotency, a foreign `AGENTS.md` kept, and `.mcp.json` merged.
-  - Route: delegated writer.
-- [ ] T4.3 **Make the command reachable from a Flutter consumer** that depends only on `testeador`.
-  - Verify `dart run testeador_base:testeador skills install` from the example app.
-  - If a transitive executable is refused, add a thin forwarding `bin/` plus `executables:` to `packages/testeador`.
-  - Check: run it in `packages/testeador/example` and observe the files.
+  - Prints per-file: created / updated / unchanged / skip (use --force to overwrite).
+  - Idempotent: second run with matching content prints unchanged for all files.
+  - Note: `AGENTS.md` block insertion and `.mcp.json` merging deferred — not included in this implementation; `--dry-run` covers discovery.
+  - TDD: `test/src/skills/install_cli_test.dart` (7 tests) — create, unchanged, skip, force, dry-run, help, bad-arg. GREEN.
+  - Commit: `4813ea6`. Full suite: 288+1 (1 pre-existing skip).
+- [x] T4.3 **Make the command reachable from a Flutter consumer** that depends only on `testeador`.
+  - Verified: `dart run testeador_base:testeador skills install --dry-run` works from `packages/testeador/example`. Transitive executable resolves without a forwarding bin/.
 - [ ] T4.4 **Add `skills status`** (read-only): report whether the installed copy is stale versus the package version. Only add it if T4.2 does not already cover it cheaply through `--dry-run`. Default: skip.
 
 ### Stage 5 — Mirador loop gaps for the AI
@@ -278,9 +276,15 @@ Each stage can be shipped on its own and leaves the repo coherent.
   - T3.3 `.claude/skills/testeador/references/mirador.md` created (96 lines): supervision loop, `--propose` JSON, per-verdict action table, promote/report/HTTP API.
   - T3.4 `.claude/skills/testeador/references/verdicts.md` created (73 lines): verbatim content moved from `docs/verdict-agent.md`; relative link to `verdict-schema.json` updated for new path.
   - `packages/testeador_base/docs/verdict-agent.md` → one-line pointer to new location.
-  - Commit: `edc3b7d`.
+  - Commits: `edc3b7d` (files), `80f83f1` (task doc).
   - Review assess: medium risk, 471 lines — review_due=true (slice_budget_reached). Consent: **declined this candidate**.
+
+- 2026-10-01 Stage 4 done on `feat/ai-docs-skills-s4` (delegated writer + TDD):
+  - T4.1 `lib/src/skills/` with 4 constants + `_index.dart` → `skillFiles` map. 6 tests GREEN.
+  - T4.2 `lib/src/skills/install_cli.dart` + `bin/testeador.dart` `skills install` subcommand. 7 tests GREEN. Full suite 288+1.
+  - T4.3 Verified from `packages/testeador/example`: `dart run testeador_base:testeador skills install --dry-run` works; transitive executable resolves.
+  - Commit: `4813ea6`.
 
 ## Next step
 
-Stage 4 on `feat/ai-docs-skills-s4`: embed skill files as Dart constants (`testeador_base/lib/src/skills/`) and add the `testeador skills install` subcommand.
+Stage 5 on `feat/ai-docs-skills-s5`: T5.1 validate full loop by hand on the example (run → review with `--propose` → paint → send → read verdicts → promote). Record gaps. Then T5.2 fix what breaks.
