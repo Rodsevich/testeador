@@ -107,21 +107,21 @@ Each stage can be shipped on its own and leaves the repo coherent.
 
 ### Stage 2 — Human docs (short, simple)
 
-- [ ] T2.1 **Write `packages/testeador/README.md`** (≤120 lines):
+- [x] T2.1 **Write `packages/testeador/README.md`** (≤120 lines):
   - What it is, in 3 lines, and the loop as a diagram: feature → flow → photos → mirador → verdict.
   - A 5-minute quick start copied from the example.
   - Where to go next (links only).
   - Route: inline.
-- [ ] T2.2 **Rewrite the root `README.md` as a two-package map.**
+- [x] T2.2 **Rewrite the root `README.md` as a two-package map.**
   - It explains which package to depend on (`testeador` for Flutter UI, `testeador_base` for pure-Dart contract flows) and the one command to install AI skills (Stage 4).
   - The current backend content moves to `packages/testeador_base/README.md`, which is the real owner of that content.
   - Route: delegated writer (2 files, content move).
-- [ ] T2.3 **Add a "Mirador" section to `testeador_base/docs/architecture.md`.** This is the owner of endpoints, flags, the evidence layout and verdict kinds. Everything else links here.
+- [x] T2.3 **Add a "Mirador" section to `testeador_base/docs/architecture.md`.** This is the owner of endpoints, flags, the evidence layout and verdict kinds. Everything else links here.
   - Route: inline.
 
 ### Stage 3 — AI knowledge: the `testeador` skill (complete for AIs)
 
-- [ ] T3.1 **Write `SKILL.md`**, following the `skill-creator` rules for frontmatter and a trigger description. Its body is the **feature loop contract**:
+- [x] T3.1 **Write `SKILL.md`**, following the `skill-creator` rules for frontmatter and a trigger description. Its body is the **feature loop contract**:
   1. Find the closest existing `UiTestFlow` and extend it before creating a new one.
   2. Write or extend steps first (RED).
   3. Implement the feature.
@@ -131,7 +131,7 @@ Each stage can be shipped on its own and leaves the repo coherent.
   7. Never close a feature without at least one photo per new UI state.
 
   It also carries hard rules: no mocks, no hiding a defect (use `knownDefects` with a reason), and no auto-promoting baselines without a user verdict.
-- [ ] T3.2 **Write `references/authoring.md`, the "eloquent testflows" guide:**
+- [x] T3.2 **Write `references/authoring.md`, the "eloquent testflows" guide:**
   - One flow per user journey, not per widget.
   - `description` in the user's voice ("Ana adds the second Pokémon").
   - `intent` states what the photo must prove, and is falsifiable by a reviewer.
@@ -142,8 +142,8 @@ Each stage can be shipped on its own and leaves the repo coherent.
   - `knownDefects` versus fixing.
   - Drift marks (`!`, `~new`, `~crash`) and what to do with each.
   - One good and one bad example, both taken from the Stage 1 example.
-- [ ] T3.3 **Write `references/mirador.md`:** commands and flags, `--propose` JSON shape, background-run pattern, how to read `verdicts.json`, the live `capture` and `report` commands for debugging a running app. It links to architecture for the endpoints (no duplication).
-- [ ] T3.4 **Write `references/verdicts.md`.**
+- [x] T3.3 **Write `references/mirador.md`:** commands and flags, `--propose` JSON shape, background-run pattern, how to read `verdicts.json`, the live `capture` and `report` commands for debugging a running app. It links to architecture for the endpoints (no duplication).
+- [x] T3.4 **Write `references/verdicts.md`.**
   - Move the content of `docs/verdict-agent.md` into it. The old path keeps a one-line pointer.
   - Keep `verdict-schema.json` where it is and link to it.
   - Route for Stage 3: delegated writer (4 files), and the writer loads `skill-creator`.
@@ -260,6 +260,27 @@ Each stage can be shipped on its own and leaves the repo coherent.
     - R3-005 (SUGGESTION): README `mirador review` example omits `--port`; duplicates the lesson already in the task log. → Fixed in T2.1 or T2.2.
 - 2026-09-30: created `feat/ai-docs-skills-s2` from s1. Starting Stage 2.
 
+- 2026-10-01 Stage 2 done on `feat/ai-docs-skills-s2` (delegated writer):
+  - T2.1 `packages/testeador/README.md` created (89 lines). 5-minute quick start, loop diagram, forward links to Stage 3 skill files (non-blocking — R3-002).
+  - T2.2 root `README.md` rewritten as two-package map; `packages/testeador_base/README.md` created with backend quick start and Mirador summary.
+  - T2.3 Mirador section appended to `packages/testeador_base/docs/architecture.md`.
+  - Review assess: medium risk, 471 lines, 5 files.
+  - Consent: **granted**. One lens (`review-reliability`): **approved**, authority burned (lineage `review-3f45906c5e77786f`). Reviewed boundary: `b39bf24` (after two advisory fixes applied).
+  - Advisory fixes applied post-review (commit `b39bf24`):
+    - R3-001: root README `skills install` presented as current → added `_(coming in Stage 4)_` caveat and `> Not yet implemented.` blockquote.
+    - R3-003: `void main() async` with no await in testeador_base quick start → dropped `async`.
+  - Boundary after fixes: `b39bf24`.
+  - Created `feat/ai-docs-skills-s3` from s2.
+
+- 2026-10-01 Stage 3 done on `feat/ai-docs-skills-s3` (delegated writer):
+  - T3.1 `.claude/skills/testeador/SKILL.md` created (57 lines): frontmatter trigger, 7-step feature loop, 4 hard rules, quick evidence-layout reference.
+  - T3.2 `.claude/skills/testeador/references/authoring.md` created (171 lines): step anatomy, PatrolTester patterns, fixture/actor/TestSuite wiring, `knownDefects`, `setUpAll`, common mistakes.
+  - T3.3 `.claude/skills/testeador/references/mirador.md` created (96 lines): supervision loop, `--propose` JSON, per-verdict action table, promote/report/HTTP API.
+  - T3.4 `.claude/skills/testeador/references/verdicts.md` created (73 lines): verbatim content moved from `docs/verdict-agent.md`; relative link to `verdict-schema.json` updated for new path.
+  - `packages/testeador_base/docs/verdict-agent.md` → one-line pointer to new location.
+  - Commit: `edc3b7d`.
+  - Review assess: medium risk, 471 lines — review_due=true (slice_budget_reached). Consent: **declined this candidate**.
+
 ## Next step
 
-Stage 2 on `feat/ai-docs-skills-s2`: T2.1 `packages/testeador/README.md`, T2.2 root + testeador_base READMEs, T2.3 Mirador section in architecture.md.
+Stage 4 on `feat/ai-docs-skills-s4`: embed skill files as Dart constants (`testeador_base/lib/src/skills/`) and add the `testeador skills install` subcommand.
