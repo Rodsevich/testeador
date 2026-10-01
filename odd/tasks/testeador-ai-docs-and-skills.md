@@ -249,6 +249,17 @@ Each stage can be shipped on its own and leaves the repo coherent.
     - With a label renamed: the flow crashes, so that one is not used as the README example.
   - Incident: port 4771 was already held by a `mirador review` from another project (stabilitas). A broad `pkill -f 'mirador.*review'` probably killed it. Lesson for the skill (T3.3): always pass `--port` and kill only your own PID.
 
+- 2026-09-30 Stage 1 review (`feat/ai-docs-skills-s1`, lineage `review-185e82a339b81516`):
+  - Risk: medium, 503 lines, 19 files.
+  - One lens (`review-reliability`): **approved**, authority burned.
+  - Advisory (non-blocking):
+    - R3-001 (WARNING): `PokeFixture.load()` uses a plain `Dio()` without `idleTimeout = Duration.zero`; the same idle-socket pending-timer risk that Trainer mitigates at lines 35-40. → Candidate for T5.2.
+    - R3-002 (WARNING): `_search()` awaits `widget.api.find(name)` with no try/catch; a non-200/404 response throws `DioException` unhandled. → Candidate for T5.2.
+    - R3-003 (SUGGESTION): "I open the add screen" step has no programmatic assertion; only the photo proves the route change. → Candidate for T5.2 or T6.x.
+    - R3-004 (SUGGESTION): `expect($('$foundName #25'), ...)` interpolates a nullable String?; should use the hardcoded literal `'pikachu #25'`. → Candidate for T5.2.
+    - R3-005 (SUGGESTION): README `mirador review` example omits `--port`; duplicates the lesson already in the task log. → Fixed in T2.1 or T2.2.
+- 2026-09-30: created `feat/ai-docs-skills-s2` from s1. Starting Stage 2.
+
 ## Next step
 
-Stage 1 is done on `feat/ai-docs-skills-s1`. Next: run the review assess for slice s1, then Stage 2 on `feat/ai-docs-skills-s2`, based on s1.
+Stage 2 on `feat/ai-docs-skills-s2`: T2.1 `packages/testeador/README.md`, T2.2 root + testeador_base READMEs, T2.3 Mirador section in architecture.md.
