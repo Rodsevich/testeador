@@ -26,7 +26,7 @@ the reverse is never true.
 
 **Dart backend (contract flows)** → see [`packages/testeador_base/README.md`](packages/testeador_base/README.md).
 
-## Install AI skills
+## Install AI skills _(coming in Stage 4)_
 
 ```bash
 dart run testeador_base:testeador skills install
@@ -36,6 +36,8 @@ Writes `.claude/skills/testeador/` into the current project, inserts a managed
 block in `AGENTS.md`, and merges the MCP server entry into `.mcp.json`. Any AI
 assistant that reads `AGENTS.md` then knows to write `UiTestFlow`s and open
 mirador automatically when you ask for a feature.
+
+> **Not yet implemented.** See the [roadmap](packages/testeador_base/docs/../roadmap.md).
 
 ## Docs
 

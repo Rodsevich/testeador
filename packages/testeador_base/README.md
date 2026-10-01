@@ -98,7 +98,7 @@ dev_dependencies:
 // test/my_flow_test.dart
 import 'package:testeador_base/testeador_base.dart';
 
-void main() async {
+void main() {
   final testeador = Testeador(
     flows: [buildMyFlow()],
     actors: [AliceActor()],
