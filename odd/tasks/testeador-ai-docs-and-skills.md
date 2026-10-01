@@ -96,7 +96,7 @@ Each stage can be shipped on its own and leaves the repo coherent.
 
 ### Stage 1 — Reference example (the thing every doc points at)
 
-- [ ] T1.1 **Create `packages/testeador/example/`.** It is a tiny Flutter app with two screens and one backend call to a real public API (no mocks). It contains:
+- [x] T1.1 **Create `packages/testeador/example/`.** It is a tiny Flutter app with two screens and one backend call to a real public API (no mocks). It contains:
   - `TestSuite.entry` with one fixture ("world") and two actors.
   - One `UiTestFlow` with 4–6 eloquent `UiTestStep`s, each with an `intent`.
   - One `knownDefects` entry that is demonstrated.
@@ -175,6 +175,12 @@ Each stage can be shipped on its own and leaves the repo coherent.
   - A stable machine-readable stdout (JSON) on `review --once` exit.
   - A free-form "change request" note surfaced to the agent.
   - `--propose` accepted from a file path.
+  - Found while building T1.1, each one is boilerplate the skill would otherwise have to teach:
+    - Real HTTP under `flutter_test` needs three workarounds: `HttpOverrides.global = null`, a `waitFor` helper that pumps real time, and `idleTimeout = Duration.zero` on the actor's `HttpClient`. Absorb them in the package, e.g. a real-HTTP Dio factory and a wait helper.
+    - `setUpEvidence` does not load `MaterialIcons`, so icons render as empty squares.
+    - `slugify` drops accents (`Pokémon` becomes `pok_mon`).
+    - `promote` needs one call per actor with the slugs spelled out. Add `--all`.
+    - Spanish log strings in `packages/testeador`, e.g. the `knownDefects` notice. This breaks the English-artifact rule.
   - Only what T5.1 shows as needed. TDD per fix.
 - [ ] T5.3 **Add the `scaffold_ui_flow` MCP tool and a `ui_flow` template** (`UiTestFlow` + `TestSuite` + actor). This way scaffolding matches the UI-first product. Update `testeador://templates/*`.
   - Route: delegated writer. TDD.
@@ -215,6 +221,25 @@ Each stage can be shipped on its own and leaves the repo coherent.
     - R3-001: `.mcp.json` relative paths assume the client spawns from the repo root. That holds for Claude Code; revisit if another client needs it.
     - R3-002: a `late tmp` teardown masks a setUp failure. Trivial.
     - R3-003: add a test for the one-level-up candidate in `resolveDocFile`. Fold it into T5.3 or a later touch of `resources.dart`.
+
+- 2026-09-30 Delivery: the user chose **feature-branch-chain**.
+  - The tracker branch is `feat/ai-docs-skills`, at base `ae765e6`.
+  - Child slices: `feat/ai-docs-skills-s0` (Stage 0) and `feat/ai-docs-skills-s1` (Stage 1, based on s0).
+  - Nothing has been pushed. Push and PR creation are the user's call.
+- 2026-09-30 T1.1 (delegated writer; trigger: several new files):
+  - Created `packages/testeador/example/`:
+    - A PokéAPI team builder.
+    - `TestSuite` with `PokeFixture` and two actors, `ana` (light) and `ben` (dark).
+    - One `UiTestFlow` with 5 intent steps.
+    - A demonstrated `knownDefects` entry: the abilities-row `RenderFlex` overflow.
+    - A 10-PNG baseline.
+  - Real HTTP, no mocks.
+  - Evidence:
+    - RED: the first run gave 10 `~new` captures.
+    - `mirador promote` ran once per actor.
+    - GREEN: "All tests passed!" with no drift marks.
+    - Parent spot check: `flutter analyze` reports 0 issues and `flutter test` gives +2 green.
+  - Finding for T4.3: `dart run testeador_base:mirador` works from the example, where `testeador_base` is only a transitive dependency.
 
 ## Next step
 
