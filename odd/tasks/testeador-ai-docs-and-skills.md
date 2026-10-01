@@ -102,7 +102,7 @@ Each stage can be shipped on its own and leaves the repo coherent.
   - One `knownDefects` entry that is demonstrated.
   - A committed baseline under `test_evidence/baseline/`.
   - Route: delegated writer (several new files). TDD: the flow itself is the test; the RED state is "no baseline / step fails".
-- [ ] T1.2 **Record the working commands in the example README** (5 lines): run the flow, `mirador review`, `mirador promote`, and ingest from patrol.
+- [x] T1.2 **Record the working commands in the example README** (5 lines): run the flow, `mirador review`, `mirador promote`, and ingest from patrol.
   - Check: run each command once and paste the observed output into the task evidence.
 
 ### Stage 2 — Human docs (short, simple)
@@ -241,6 +241,14 @@ Each stage can be shipped on its own and leaves the repo coherent.
     - Parent spot check: `flutter analyze` reports 0 issues and `flutter test` gives +2 green.
   - Finding for T4.3: `dart run testeador_base:mirador` works from the example, where `testeador_base` is only a transitive dependency.
 
+- 2026-09-30 T1.2 (inline): `packages/testeador/example/README.md`.
+  - Ingest from patrol was dropped: the example has no patrol run, so the command could not be verified.
+  - Observed:
+    - `mirador review --port 4799` serves `test_evidence`, and the queue has 0 items on a clean run (unchanged captures are skipped, `review.dart:210`).
+    - With `colorSchemeSeed` changed: tests pass and the queue has 10 items with 5 marks each.
+    - With a label renamed: the flow crashes, so that one is not used as the README example.
+  - Incident: port 4771 was already held by a `mirador review` from another project (stabilitas). A broad `pkill -f 'mirador.*review'` probably killed it. Lesson for the skill (T3.3): always pass `--port` and kill only your own PID.
+
 ## Next step
 
-Choose the chain strategy (`stacked-to-main` or `feature-branch-chain`), then Stage 1 (T1.1 reference example).
+Stage 1 is done on `feat/ai-docs-skills-s1`. Next: run the review assess for slice s1, then Stage 2 on `feat/ai-docs-skills-s2`, based on s1.
