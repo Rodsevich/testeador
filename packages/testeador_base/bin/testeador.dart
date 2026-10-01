@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:testeador_base/src/capture/record_cli.dart';
 import 'package:testeador_base/src/discovery/cli.dart';
 import 'package:testeador_base/src/mcp/server.dart';
+import 'package:testeador_base/src/skills/install_cli.dart';
 
 const _version = '0.4.0';
 
@@ -18,6 +19,7 @@ Commands:
   discover   List captured tests and (optionally) scaffold a TestFlow.
   record     Capture a running app's HTTP traffic and draft the missing
              contract tests (--backend web|native).
+  skills     Install AI skill files into a consumer project.
 
 Top-level flags:
   --version, -V   Print the testeador version and exit.
@@ -49,6 +51,17 @@ Future<void> main(List<String> args) async {
       return;
     case 'record':
       exitCode = await runRecordCli(rest);
+      return;
+    case 'skills':
+      final subcommand = rest.isEmpty ? '' : rest.first;
+      if (subcommand == 'install') {
+        exitCode = await runSkillsInstallCli(rest.skip(1).toList());
+      } else {
+        stderr
+          ..writeln('Unknown skills subcommand: $subcommand')
+          ..writeln('Available: install');
+        exitCode = 64;
+      }
       return;
     default:
       stderr
