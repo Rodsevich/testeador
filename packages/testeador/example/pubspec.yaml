@@ -1,0 +1,35 @@
+name: testeador_example
+description: >-
+  Canonical consumer of `testeador`: a two-screen team builder whose UI flow
+  is photographed step by step and judged against a committed baseline.
+publish_to: none
+version: 0.0.1
+
+environment:
+  sdk: ^3.11.0
+  flutter: ">=3.44.0"
+
+dependencies:
+  dio: ^5.0.0
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  testeador:
+    path: ..
+  very_good_analysis: ^10.2.0
+
+dependency_overrides:
+  # dev_mate* is not published and pub only applies the root package's
+  # overrides, so a consumer of `testeador` must repeat them.
+  dev_mate:
+    path: ../../../../packages/dev_mate/packages/dev_mate
+  dev_mate_client:
+    path: ../../../../packages/dev_mate/packages/dev_mate_client
+  dev_mate_mcp:
+    path: ../../../../packages/dev_mate/packages/dev_mate_mcp
+
+flutter:
+  uses-material-design: true

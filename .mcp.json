@@ -2,12 +2,14 @@
   "mcpServers": {
     "dart": {
       "command": "dart",
-      "args": ["mcp-server"]
+      "args": [
+        "mcp-server"
+      ]
     },
     "patrol": {
       "command": "./.claude/run-patrol",
       "env": {
-        "PROJECT_ROOT": "./example/pokebattle_rest",
+        "PROJECT_ROOT": "./packages/testeador_base/example/pokebattle_rest",
         "PATROL_FLAGS": "",
         "SHOW_TERMINAL": "false"
       }
@@ -18,10 +20,14 @@
     },
     "testeador": {
       "command": "dart",
-      "args": ["run", "--no-serve-devtools", "testeador:testeador", "mcp"],
-      "cwd": "${workspaceFolder}",
+      "args": [
+        "run",
+        "--no-serve-devtools",
+        "packages/testeador_base/bin/testeador.dart",
+        "mcp"
+      ],
       "env": {
-        "TESTEADOR_PROJECT_ROOT": "${workspaceFolder}",
+        "TESTEADOR_PROJECT_ROOT": "packages/testeador_base",
         "TESTEADOR_MCP_ENABLE_MULTIDEV": "1"
       }
     }

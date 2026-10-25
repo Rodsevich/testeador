@@ -343,6 +343,77 @@ dart run example/pokebattle_rest/bin/run_tests.dart --include-tags smoke --verbo
 | Header redaction | Opt-out (default `authorization`, `cookie`) | Safer default for CI logs |
 | No mocks | All HTTP calls to real APIs | In-memory fakes cannot catch contract regressions |
 
+## Mirador
+
+Mirador is the visual review panel for UI evidence produced by `UiTestFlow` runs (the Flutter `testeador` package). It is a loopback web server (`lib/src/mirador/`) exposed as the `mirador` CLI subcommand.
+
+### Evidence layout
+
+```text
+test_evidence/
+  runs/current/<scenario>/          # current run (gitignored)
+    <actor>-<step-slug>.png
+    manifest.json                   # step intents and drift marks
+  baseline/<scenario>/              # accepted reference (committed)
+    <actor>-<step-slug>.png
+    verdicts.json                   # brush verdicts from the last review
+```
+
+- `<scenario>` is the flow name slug (e.g. `build_my_team`).
+- `<step-slug>` is the step description slug (e.g. `i_open_my_team_and_it_is_empty`).
+- Drift marks: `~new` (no baseline), `!` (pixel difference), `~crash` (step failed). Drift never fails a run.
+
+### Subcommands
+
+| Command | What it does |
+| --- | --- |
+| `mirador capture` | Live screenshot from a running device; compares to baseline |
+| `mirador ingest` | Import Patrol run output into the evidence layout |
+| `mirador review [--port N] [--once] [--propose '<json>']` | Serve the review panel; exit after printing verdicts when `--once` |
+| `mirador promote --scenario S --actor A --slugs s1,s2,...` | Copy current captures to baseline |
+| `mirador report` | Trigger `ext.dev_mate.reporter.capture` on a running app |
+
+#### `mirador review` flags
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `--port` | `4771` | TCP port for the loopback server — always pass explicitly to avoid collisions |
+| `--once` | false | Exit after the user sends verdicts; prints the JSON verdict list to stdout |
+| `--propose '<json>'` | — | Inject an agent's pre-judgment alongside each photo |
+
+### Verdicts
+
+Brushes in the panel POST to `POST /verdict` and land in `baseline/<scenario>/verdicts.json`.
+
+| Verdict | Meaning | Agent action |
+| --- | --- | --- |
+| `fix_code` | UI is wrong | Fix the implementation and re-run the flow |
+| `replace_baseline` | Photo is the new truth | Run `mirador promote` for the accepted steps |
+| `explain` | Reviewer wants context | Explain the intent and ask whether to fix or promote |
+| `variants` | Review alternate actors | No action; informational |
+
+### HTTP endpoints (loopback only)
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/` | Review panel (HTML) |
+| `GET` | `/queue` | JSON list of photos pending review |
+| `POST` | `/verdict` | Submit one or more brush verdicts |
+| `POST` | `/capture` | Live screenshot from a connected device |
+
+### `--propose` JSON shape
+
+```json
+{
+  "ana-i_open_my_team_and_it_is_empty": {
+    "verdict": "replace_baseline",
+    "note": "Looks correct; the empty state is intentional."
+  }
+}
+```
+
+Keys are `<actor>-<step-slug>`. Valid verdicts: `fix_code`, `replace_baseline`, `explain`, `variants`.
+
 ## Glossary
 
 - **Actor** — abstract class for a user persona; subclasses provide a named `Dio` with base URL, auth, etc.
