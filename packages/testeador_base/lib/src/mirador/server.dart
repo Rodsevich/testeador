@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -48,6 +49,7 @@ final class MiradorServer {
   final String captureActor;
 
   HttpServer? _server;
+  final Set<WebSocket> _aiSockets = {};
 
   /// Puerto real (útil cuando se pide 0).
   int get boundPort => _server?.port ?? port;
@@ -83,6 +85,12 @@ final class MiradorServer {
           await req.response.close();
           continue;
         }
+        if (req.method == 'GET' && path == '/ai-wake') {
+          final ws = await WebSocketTransformer.upgrade(req);
+          _aiSockets.add(ws);
+          unawaited(ws.done.then((_) => _aiSockets.remove(ws)));
+          continue;
+        }
         if (req.method == 'POST' && path == '/capture') {
           await _capture(req);
           continue;
@@ -110,14 +118,17 @@ final class MiradorServer {
           await req.response.close();
         } else if (req.method == 'GET' && path == '/shot') {
           await _serveShot(req, root);
-        } else if (req.method == 'POST' && path == '/verdict') {
+        } else if (req.method == 'POST' &&
+            (path == '/verdict' || path == '/verdict/partial')) {
+          final partial = path == '/verdict/partial';
           final body = await utf8.decoder.bind(req).join();
-          outcome = ReviewOutcome.fromJson(
+          final parsed = ReviewOutcome.fromJson(
             jsonDecode(body) as Map<String, Object?>,
           );
+          if (!partial) outcome = parsed;
           appendVerdicts(
             baseDir: baseDir,
-            decisions: outcome.decisions,
+            decisions: parsed.decisions,
             judgedAt: DateTime.now().toUtc().toIso8601String(),
           );
           req.response
@@ -126,11 +137,31 @@ final class MiradorServer {
             ..write(
               jsonEncode({
                 'ok': true,
-                'decisions': outcome.decisions.length,
+                'decisions': parsed.decisions.length,
               }),
             );
           await req.response.close();
-          if (once) break;
+          final msg = jsonEncode({
+            'type': partial ? 'verdicts' : 'finalized',
+            'count': parsed.decisions.length,
+            'changes': [
+              for (final d in parsed.decisions)
+                {
+                  'scenario': d.scenario,
+                  'actor': d.actor,
+                  'slug': d.slug,
+                  'verdict': d.verdict.wire,
+                },
+            ],
+          });
+          for (final ws in List.of(_aiSockets)) {
+            try { ws.add(msg); } on Object { _aiSockets.remove(ws); }
+          }
+          if (!partial && once) {
+            // Dar tiempo al WS para que entregue el frame antes de cerrar.
+            await Future<void>.delayed(const Duration(milliseconds: 200));
+            break;
+          }
         } else {
           req.response.statusCode = HttpStatus.notFound;
           await req.response.close();

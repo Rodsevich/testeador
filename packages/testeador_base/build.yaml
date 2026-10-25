@@ -1,6 +1,6 @@
 builders:
   capture:
-    import: 'package:testeador/src/codegen/builder_factories.dart'
+    import: 'package:testeador_base/src/codegen/builder_factories.dart'
     builder_factories: ['captureBuilderFactory']
     build_extensions:
       'test/{{}}_test.dart':
@@ -8,10 +8,10 @@ builders:
         - 'lib/src/_testeador/{{}}_test.testeador.manifest.json'
     auto_apply: dependents
     build_to: source
-    runs_before: ['testeador:aggregator']
+    runs_before: ['testeador_base:aggregator']
 
   aggregator:
-    import: 'package:testeador/src/codegen/builder_factories.dart'
+    import: 'package:testeador_base/src/codegen/builder_factories.dart'
     builder_factories: ['aggregatorBuilderFactory']
     build_extensions:
       $package$:

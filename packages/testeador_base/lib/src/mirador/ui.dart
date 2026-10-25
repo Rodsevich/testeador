@@ -74,22 +74,54 @@ const String _html = r'''
   .done { opacity: .55; }
   main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
   #bar {
-    padding: 8px 12px; border-bottom: 1px solid var(--line); display: flex;
-    gap: 12px; align-items: center; flex-wrap: wrap; background: var(--panel);
+    padding: 6px 12px; border-bottom: 1px solid var(--line); display: flex;
+    gap: 10px; align-items: center; flex-wrap: wrap; background: var(--panel);
   }
   #bar .grow { flex: 1; }
   #intent {
     flex: 1 1 260px; min-width: 0; color: var(--dim);
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+    overflow: hidden; font-size: 11px;
   }
+  #bar button { padding: 3px 7px; font-size: 11px; }
   #stage { flex: 1; overflow: auto; position: relative; display: grid; place-items: start center; padding: 14px; }
   #wrap { position: relative; line-height: 0; }
   #wrap img { max-width: 100%; height: auto; display: block; }
   #cv { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
   #prevImg { position: absolute; inset: 0; width: 100%; height: auto; }
   #clip { position: absolute; inset: 0; overflow: hidden; }
-  #palette { display: flex; gap: 4px; flex-wrap: wrap; padding: 8px 12px; border-top: 1px solid var(--line); background: var(--panel); }
+  /* ── strip de acciones central ── */
+  #actions {
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; padding: 10px 16px; border-top: 1px solid var(--line);
+    background: var(--panel); flex-shrink: 0;
+  }
+  #progress {
+    font-size: 11px; color: var(--dim); min-width: 48px; text-align: center;
+  }
+  #actions .sep { width: 1px; height: 28px; background: var(--line); }
+  .act {
+    font: inherit; color: var(--ink); background: transparent; cursor: pointer;
+    border: 1px solid var(--line); border-radius: 4px; padding: 6px 14px;
+    display: flex; align-items: center; gap: 6px; font-size: 12px;
+    transition: border-color .1s, background .1s;
+  }
+  .act:hover { border-color: var(--ink); background: #ffffff0a; }
+  .act.accept { border-color: var(--green); color: var(--green); font-weight: 600; padding: 7px 22px; font-size: 13px; }
+  .act.accept:hover { background: #2e9e5b18; }
+  .act.reject { border-color: var(--red); color: var(--red); }
+  .act.reject:hover { background: #d92d2018; }
+  .act.send { border-color: var(--line); color: var(--dim); font-weight: 600; opacity: .45; cursor: not-allowed; }
+  .act.send:not([disabled]) { border-color: var(--gold); color: var(--gold); opacity: 1; cursor: pointer; }
+  .act.send:not([disabled]):hover { background: #c9a22718; }
+  .act.send.finish { border-color: var(--ink); color: var(--ink); }
+  .act.send.finish:hover { background: #ffffff0a; }
+  .act kbd {
+    border: 1px solid currentColor; border-bottom-width: 2px; border-radius: 3px;
+    padding: 0 4px; font: inherit; font-size: 10px; opacity: .7;
+  }
+  /* ── palette de pinceles ── */
+  #palette { display: flex; gap: 4px; flex-wrap: wrap; padding: 6px 12px; border-top: 1px solid var(--line); background: var(--panel); }
   .brush {
     display: flex; align-items: center; gap: 5px; padding: 3px 7px;
     border: 1px solid var(--line); border-radius: 3px; cursor: pointer; font-size: 11px;
@@ -110,7 +142,7 @@ const String _html = r'''
     width: 100%; background: var(--bg); color: var(--ink); border: 1px solid var(--line);
     border-radius: 3px; padding: 6px; font: inherit; resize: vertical;
   }
-  #notes { padding: 8px 12px; border-top: 1px solid var(--line); background: var(--panel); display: grid; gap: 6px; }
+  #notes { padding: 6px 12px; border-top: 1px solid var(--line); background: var(--panel); display: grid; gap: 6px; }
   #notes label { color: var(--dim); font-size: 11px; }
   #help {
     position: fixed; inset: 0; background: #000000d0; display: none; place-items: center; padding: 24px; z-index: 9;
@@ -173,14 +205,11 @@ const String _html = r'''
 <main>
   <div id="bar">
     <strong id="title">—</strong>
-    <span class="meta" id="intent"></span>
+    <span id="intent"></span>
     <span class="grow"></span>
     <span id="viewName" class="meta"></span>
     <button onclick="cycleView()">vista <kbd>D</kbd></button>
-    <button onclick="setDecision('accept')">aceptar <kbd>A</kbd></button>
-    <button onclick="setDecision('reject')">rechazar <kbd>R</kbd></button>
     <button onclick="setDecision('variants')">variantes <kbd>V</kbd></button>
-    <button class="primary" onclick="send()">enviar <kbd>⏎</kbd></button>
     <button onclick="toggleHelp()"><kbd>?</kbd></button>
   </div>
 
@@ -195,6 +224,18 @@ const String _html = r'''
   </div>
 
   <div id="palette"></div>
+
+  <div id="actions">
+    <button class="act" onclick="select(cur-1)" title="Anterior (←)">← <kbd>←</kbd></button>
+    <span id="progress">— / —</span>
+    <button class="act" onclick="select(cur+1)" title="Siguiente (→)">→ <kbd>→</kbd></button>
+    <div class="sep"></div>
+    <button class="act reject" onclick="setDecision('reject')" title="Rechazar (R)">✗ rechazar <kbd>R</kbd></button>
+    <button class="act accept" onclick="setDecision('accept')" title="Aceptar (A)">✓ aceptar <kbd>A</kbd></button>
+    <div class="sep"></div>
+    <button class="act send" id="sendBtn" onclick="handleSend()" title="Enviar cambios a la IA (Enter)" disabled>↵ enviar a la IA <kbd>⏎</kbd></button>
+  </div>
+
   <div id="notes">
     <label>Instrucciones para esta captura</label>
     <textarea id="note" rows="2" placeholder="lo que quieras aclarar sobre esta pantalla…"></textarea>
@@ -245,6 +286,7 @@ async function boot() {
   ITEMS = data.items;
   STATE = ITEMS.map((i) => ({ decision: null, marks: [], note: '', chosen: null }));
   $('sub').textContent = ITEMS.length + ' captura(s) · ordenadas por severidad';
+  $('progress').textContent = ITEMS.length ? '1 / ' + ITEMS.length : '0 / 0';
   renderPalette();
   renderQueue();
   if (!ITEMS.length) {
@@ -298,7 +340,8 @@ function select(i) {
   strokes = st().marks.slice();
   const it = item();
   $('title').textContent = it.scenario + ' / ' + it.actor + ' / ' + it.slug;
-  $('intent').textContent = it.intent ? '“' + it.intent + '”' : '(sin intent declarado)';
+  $('intent').textContent = it.intent ? '”' + it.intent + '”' : '(sin intent declarado)';
+  $('progress').textContent = (cur + 1) + ' / ' + ITEMS.length;
   $('note').value = st().note || '';
   if (it.variants && it.variants.length) {
     renderStrip(it);
@@ -394,7 +437,7 @@ $('cv').addEventListener('pointerup', () => {
   strokes.push(drawing);
   st().marks = strokes.slice();
   drawing = null;
-  redraw(); renderQueue();
+  redraw(); renderQueue(); updateSendBtn();
 });
 $('cv').addEventListener('dblclick', (ev) => {
   const at = toImage(ev);
@@ -447,47 +490,84 @@ function setDecision(kind) {
   toast(kind === 'accept' ? 'aceptado lo propuesto'
       : kind === 'reject' ? 'rechazado: se revierte'
       : 'se piden 3 variantes');
+  updateSendBtn();
   if (cur + 1 < ITEMS.length) select(cur + 1);
+}
+
+const CHANGE_VERDICTS = new Set(['fix_code', 'fix_test', 'variants']);
+
+let _sendMode = 'ai';
+
+function updateSendBtn() {
+  let changes = 0, decided = 0;
+  STATE.forEach((s) => {
+    if (s.decision || s.marks.length) decided++;
+    if (s.sent) return;
+    if (s.marks.length && CHANGE_VERDICTS.has(verdictOf(s.marks))) changes++;
+    else if (s.decision === 'reject' || s.decision === 'variants') changes++;
+  });
+  const btn = $('sendBtn');
+  const allDecided = decided === ITEMS.length && ITEMS.length > 0;
+  if (changes > 0) {
+    _sendMode = 'ai';
+    btn.disabled = false;
+    btn.classList.remove('finish');
+    btn.innerHTML = '↵ enviar a la IA · <strong>' + changes + '</strong> cambio' + (changes > 1 ? 's' : '') + ' <kbd>⏎</kbd>';
+  } else if (allDecided) {
+    _sendMode = 'finish';
+    btn.disabled = false;
+    btn.classList.add('finish');
+    btn.innerHTML = '✔ finalizar revisión <kbd>⏎</kbd>';
+  } else {
+    _sendMode = 'ai';
+    btn.disabled = true;
+    btn.classList.remove('finish');
+    btn.innerHTML = '↵ enviar a la IA <kbd>⏎</kbd>';
+  }
+}
+
+function handleSend() {
+  if (_sendMode === 'finish') send(); else sendToAI();
+}
+
+function buildDecision(it, s) {
+  let verdict, judgedBy = 'human', rationale;
+  if (s.marks.length) {
+    verdict = verdictOf(s.marks);
+    rationale = s.marks.map((m) => {
+      const b = BRUSHES.find((x) => x.id === m.brush) || {};
+      return b.label + (m.note ? ': ' + m.note : '');
+    }).join(' · ');
+  } else if (s.decision === 'reject') {
+    verdict = 'fix_code'; rationale = 'Rechazado en el panel: revertir el cambio.';
+  } else if (s.decision === 'variants') {
+    verdict = 'variants'; rationale = 'Se piden 3 variantes de esta pantalla.';
+  } else if (s.decision === 'variant' && s.chosen != null) {
+    verdict = 'variants';
+    rationale = 'Elegida la variante ' + roman(s.chosen + 1) + ' de ' + it.variants.length + '.';
+  } else if (s.decision === 'accept') {
+    verdict = it.proposedVerdict; judgedBy = 'agent';
+    rationale = it.rationale || 'Aceptado en bloque lo propuesto.';
+  } else {
+    return null;
+  }
+  return {
+    scenario: it.scenario, actor: it.actor, slug: it.slug,
+    capture: it.capture ? it.capture.split('/').pop() : null,
+    verdict, rationale, judgedBy,
+    marks: s.marks.map((m) => ({
+      brush: m.brush, note: m.note || null,
+      rect: bounds(m.points), points: m.points,
+    })),
+    note: s.note || null,
+    chosenVariant: (s.chosen != null && it.variants && it.variants[s.chosen])
+      ? it.variants[s.chosen].split('/').pop() : null,
+  };
 }
 
 async function send() {
   if (ITEMS.length) st().note = $('note').value;
-  const decisions = ITEMS.map((it, i) => {
-    const s = STATE[i];
-    let verdict, judgedBy = 'human', rationale;
-    if (s.marks.length) {
-      verdict = verdictOf(s.marks);
-      rationale = s.marks.map((m) => {
-        const b = BRUSHES.find((x) => x.id === m.brush) || {};
-        return b.label + (m.note ? ': ' + m.note : '');
-      }).join(' · ');
-    } else if (s.decision === 'reject') {
-      verdict = 'fix_code'; rationale = 'Rechazado en el panel: revertir el cambio.';
-    } else if (s.decision === 'variants') {
-      verdict = 'variants'; rationale = 'Se piden 3 variantes de esta pantalla.';
-    } else if (s.decision === 'variant' && s.chosen != null) {
-      verdict = 'variants';
-      rationale = 'Elegida la variante ' + roman(s.chosen + 1) + ' de ' +
-        it.variants.length + '.';
-    } else if (s.decision === 'accept') {
-      verdict = it.proposedVerdict; judgedBy = 'agent';
-      rationale = it.rationale || 'Aceptado en bloque lo propuesto.';
-    } else {
-      return null;
-    }
-    return {
-      scenario: it.scenario, actor: it.actor, slug: it.slug,
-      capture: it.capture ? it.capture.split('/').pop() : null,
-      verdict, rationale, judgedBy,
-      marks: s.marks.map((m) => ({
-        brush: m.brush, note: m.note || null,
-        rect: bounds(m.points), points: m.points,
-      })),
-      note: s.note || null,
-      chosenVariant: (s.chosen != null && it.variants && it.variants[s.chosen])
-        ? it.variants[s.chosen].split('/').pop() : null,
-    };
-  }).filter(Boolean);
+  const decisions = ITEMS.map((it, i) => buildDecision(it, STATE[i])).filter(Boolean);
 
   if (!decisions.length) { toast('nada decidido todavía'); return; }
   const res = await fetch('/verdict', {
@@ -498,6 +578,32 @@ async function send() {
     document.body.innerHTML =
       '<div class="empty" style="margin:auto">Veredicto enviado: ' + decisions.length +
       ' captura(s).<br>Podés cerrar esta pestaña.</div>';
+  } else {
+    toast('falló el envío (' + res.status + ')');
+  }
+}
+
+async function sendToAI() {
+  if (ITEMS.length) st().note = $('note').value;
+  const decisions = ITEMS.map((it, i) => {
+    const d = buildDecision(it, STATE[i]);
+    if (!d || !CHANGE_VERDICTS.has(d.verdict)) return null;
+    return d;
+  }).filter(Boolean);
+
+  if (!decisions.length) { toast('no hay cambios para enviar'); return; }
+  const res = await fetch('/verdict/partial', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ decisions, roundNote: $('roundNote').value || null }),
+  });
+  if (res.ok) {
+    decisions.forEach((d) => {
+      const i = ITEMS.findIndex((it) => it.scenario === d.scenario && it.actor === d.actor && it.slug === d.slug);
+      if (i >= 0) STATE[i].sent = true;
+    });
+    toast('✓ ' + decisions.length + ' cambio(s) enviado(s) a la IA');
+    updateSendBtn();
+    renderQueue();
   } else {
     toast('falló el envío (' + res.status + ')');
   }
@@ -531,15 +637,15 @@ addEventListener('keydown', (ev) => {
   if (k === 'Tab') { pick((brushIx + 1) % BRUSHES.length); ev.preventDefault(); return; }
   if (k === '+' || k === '=') { width = Math.min(40, width + 2); toast('grosor ' + width); return; }
   if (k === '-') { width = Math.max(2, width - 2); toast('grosor ' + width); return; }
-  if (k === 'u') { strokes.pop(); st().marks = strokes.slice(); redraw(); renderQueue(); return; }
-  if (k === 'U') { strokes = []; st().marks = []; redraw(); renderQueue(); return; }
+  if (k === 'u') { strokes.pop(); st().marks = strokes.slice(); redraw(); renderQueue(); updateSendBtn(); return; }
+  if (k === 'U') { strokes = []; st().marks = []; redraw(); renderQueue(); updateSendBtn(); return; }
   if (k === 'ArrowLeft') { select(cur - 1); return; }
   if (k === 'ArrowRight') { select(cur + 1); return; }
   if (k === 'd' || k === 'D') { cycleView(); return; }
   if (k === 'a' || k === 'A') { setDecision('accept'); return; }
   if (k === 'r' || k === 'R') { setDecision('reject'); return; }
   if (k === 'v' || k === 'V') { setDecision('variants'); return; }
-  if (k === 'Enter') { send(); return; }
+  if (k === 'Enter') { handleSend(); return; }
   if (k === '?') { toggleHelp(); return; }
 });
 
